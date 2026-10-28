@@ -13,7 +13,7 @@ Extrait de M3 @ 1c1d201 par `scripts/decoupage/extraire-console.mjs` (dépôt M3
 
 ```
 cp .env.example .env   # DATABASE_URL au minimum
-npm ci
+npm ci --prefer-offline --no-audit --no-fund
 npm run dev            # http://localhost:4173
 ```
 
@@ -25,9 +25,12 @@ Image : `docker build -t m3_console .` (Next standalone, port 4173, sans migrati
 - `npm run build` : `next build`
 - `npm run start` : `next start`
 - `npm run typecheck` : `next typegen && tsc --noEmit`
-- `npm run lint` : `eslint`
-- `npm run test` : `node --test "test/*.test.js" && node --experimental-test-module-mocks --test "test/wiring/*.test.js" && node --import tsx --test "src/**/*.test.ts"`
-- `npm run check` : `npm run typecheck && npm run lint && npm test && npm run build`
+- `npm run lint` : `eslint --cache` (cache dans `.next/cache/eslint/`)
+- `npm run test` : un seul `node --test` (tests `test/`, câblage `test/wiring/`, tranches `src/**/*.test.ts`)
+- `npm run check:rapide` : typecheck, lint et tests en parallèle (`scripts/check.mjs --rapide`), sans compilation
+- `npm run check` : idem, puis `npm run build` si tout est vert
+
+Caches gardés d'une passe à l'autre, tous sous `.next/cache/` (que `next build` conserve et que la CI restaure) : compilation Turbopack, `tsconfig.tsbuildinfo` (tsc incrémental), lint. Un worktree neuf : `npm ci --prefer-offline --no-audit --no-fund`.
 
 ## Transformations appliquées par l'extraction
 

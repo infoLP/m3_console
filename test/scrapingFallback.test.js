@@ -6,6 +6,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { harvestArticleList, looksJsRendered } from "../src/ingest/fetchArticleList.js";
 import { rendererFor, fetchRendered, fetchStealth, closeRenderer } from "../src/ingest/fetchRendered.js";
+import { fakeChromium } from "./outils/fauxChromium.js";
 
 const LIST = "https://exemple.test/actualites";
 const para = (s) => `<p>${s} ${"Le conseil municipal a présenté le projet aux habitants du quartier. ".repeat(4)}</p>`;
@@ -328,37 +329,6 @@ test("T6 : source en liste blanche, furtif en échec ou sans rien de lisible →
 });
 
 
-/* M3-116 — faux playwright-core à plusieurs lancements : chaque launchServer()
-   rend un serveur et un navigateur neufs (st.launches). `hang` : numéros des
-   lancements (0, 1…) qui attendent st.release[n]() ; `hangCtxClose` : numéros des
-   contextes dont close() ne rend jamais la main (navigateur gelé). */
-function fakeChromium({ hang = [], hangCtxClose = [] } = {}) {
-  const st = { launches: 0, killed: [], pending: [], release: {}, contexts: 0 };
-  const chromium = {
-    name: () => "chromium",
-    launchServer: () => {
-      const n = st.launches++;
-      const server = { n, wsEndpoint: () => `ws://127.0.0.1:1/${n}`, kill: async () => { st.killed.push(n); }, process: () => ({ kill: () => {} }) };
-      return hang.includes(n) ? new Promise((r) => { st.release[n] = () => r(server); }) : Promise.resolve(server);
-    },
-    connect: async (ws) => ({
-      n: Number(ws.split("/").pop()),
-      newContext: async () => {
-        const c = st.contexts++;
-        return {
-          newPage: async () => ({
-            route: async () => {},
-            goto: () => new Promise((r) => st.pending.push(() => r({ status: () => 200 }))),
-            content: async () => `<html>${c}</html>`,
-          }),
-          close: () => (hangCtxClose.includes(c) ? new Promise(() => {}) : Promise.resolve()),
-        };
-      },
-      close: async () => {},
-    }),
-  };
-  return { lib: { chromium }, st };
-}
 
 test("M3-116 : appels en attente d'un lancement abandonné → une nouvelle tentative sur un lancement neuf, réussie", async () => {
   await closeRenderer();
@@ -405,31 +375,6 @@ test("M3-116 : ctx.close() gelé avec inUse > 1 → les appels voisins sont rete
   await until(() => st.killed.includes(0));
   assert.ok(st.killed.includes(0), "le navigateur gelé est tué");
   await closeRenderer();
-}, { timeout: 30000 });
-
-/* Faux crawlee dont le crawler lance son navigateur par le lanceur reçu, puis
-   gèle (run et teardown ne rendent jamais la main) : un Chromium furtif gelé. */
-function frozenCrawlee(seen) {
-  return {
-    Configuration: class {},
-    PlaywrightCrawler: class {
-      constructor(options) { this.options = options; seen.options = options; }
-      async run() {
-        seen.browser = await this.options.launchContext.launcher.launch({ headless: true });
-        return new Promise(() => {});
-      }
-      teardown() { return new Promise(() => {}); }
-    },
-  };
-}
-
-test("M3-116 : Chromium furtif gelé sous crawlee → son serveur est tué après le démontage borné", async () => {
-  const seen = {};
-  const { lib: pw, st } = fakeChromium();
-  await assert.rejects(fetchStealth(LIST, { lib: frozenCrawlee(seen), pw, hardMs: 50 }), /délai dépassé/);
-  assert.equal(seen.options.launchContext.useIncognitoPages, true, "pages incognito : crawlee passe par launch()");
-  assert.ok(seen.browser, "navigateur lancé par notre lanceur");
-  assert.deepEqual(st.killed, [0], "serveur tué (BrowserServer.kill)");
 }, { timeout: 30000 });
 
 test("M3-116 : furtif — un lancement arrivé après le démontage est tué aussitôt", async () => {

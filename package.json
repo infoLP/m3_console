@@ -12,9 +12,10 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "next typegen && tsc --noEmit",
-    "lint": "eslint",
-    "test": "node --test \"test/*.test.js\" && node --experimental-test-module-mocks --test \"test/wiring/*.test.js\" && node --import tsx --test \"src/**/*.test.ts\"",
-    "check": "npm run typecheck && npm run lint && npm test && npm run build"
+    "lint": "eslint --cache --cache-location .next/cache/eslint/",
+    "test": "node --experimental-test-module-mocks --import tsx --test \"test/*.test.js\" \"test/wiring/*.test.js\" \"src/**/*.test.ts\"",
+    "check": "node scripts/check.mjs",
+    "check:rapide": "node scripts/check.mjs --rapide"
   },
   "dependencies": {
     "cheerio": "^1.0.0",
