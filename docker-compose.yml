@@ -1,0 +1,47 @@
+# Stack « m3-console » (Portainer ou clone de l'hôte) : la console seule.
+# Le moteur (worker, migrations) est la stack « m3 » du dépôt M3 : la déployer
+# d'abord (migrations additives). Mêmes POSTGRES_* et M3_SECRET_KEY des deux
+# côtés. Une seule stack à la fois porte le routeur Traefik « m3-prototype ».
+# Source : M3 docs/passation/PASSATION-portainer.md, addendum du 2026-10-28.
+
+name: m3-console
+services:
+  m3-console:
+    build: { context: . }
+    image: m3-console:latest
+    pull_policy: build
+    container_name: m3-console
+    hostname: m3-console
+    restart: unless-stopped
+    environment:
+      TZ: Europe/Paris
+      PORT: "4173"
+      M3_COOKIE_SECURE: "${M3_COOKIE_SECURE:-1}"
+      M3_SECRET_KEY: "${M3_SECRET_KEY:-}"
+      M3_LLM_ALLOWLIST_OPENROUTER: "${M3_LLM_ALLOWLIST_OPENROUTER:-}"
+      M3_ENTRA_TENANT_ID: "${M3_ENTRA_TENANT_ID:-}"
+      M3_ENTRA_CLIENT_ID: "${M3_ENTRA_CLIENT_ID:-}"
+      M3_ENTRA_CLIENT_SECRET: "${M3_ENTRA_CLIENT_SECRET:-}"
+      M3_ENTRA_DOMAIN_HINT: "${M3_ENTRA_DOMAIN_HINT:-}"
+      M3_PUBLIC_URL: "${M3_PUBLIC_URL:-https://m3-prototype.dev.legalprime.fr}"
+      M3_AUTH_MODE: "${M3_AUTH_MODE:-}"
+      CONSOLE_CONNEXION_LOCALE: "${CONSOLE_CONNEXION_LOCALE:-}"
+      M3_TRUSTED_PROXIES: "${M3_TRUSTED_PROXIES:-10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}"
+      M3_IP_BAN_THRESHOLD: "${M3_IP_BAN_THRESHOLD:-15}"
+      M3_IP_BAN_WINDOW_HOURS: "${M3_IP_BAN_WINDOW_HOURS:-24}"
+      M3_IP_BAN_EXEMPT: "${M3_IP_BAN_EXEMPT:-}"
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-m3_dbuser}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD est obligatoire}@${POSTGRES_HOST:-51.83.75.214}:${POSTGRES_PORT:-15432}/${POSTGRES_DB:-m3db}?schema=public"
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - traefik_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_network"
+      - "traefik.http.routers.m3-prototype.rule=Host(`m3-prototype.dev.legalprime.fr`)"
+      - "traefik.http.routers.m3-prototype.entrypoints=websecure"
+      - "traefik.http.routers.m3-prototype.tls.certresolver=letsencrypt"
+      - "traefik.http.services.m3-prototype.loadbalancer.server.port=4173"
+networks:
+  traefik_network:
+    external: true

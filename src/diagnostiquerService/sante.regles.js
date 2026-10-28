@@ -6,8 +6,8 @@
    sans base (diagnostiquerService.test.ts). */
 
 /* Schéma attendu, à la M2 (M2_Console/src/etat.ts) : les migrations vivent
-   dans le moteur, qui les joue à son démarrage ; la console n'a plus de dossier
-   migrations/ à lire (T25). Elle dit seulement ce dont ELLE a besoin, table ou
+   dans le moteur, qui les joue à son démarrage ; la console n'en a plus aucune
+   copie à lire (T25). Elle dit seulement ce dont ELLE a besoin, table ou
    « table.colonne », et quelle migration du moteur le crée : un élément absent
    se traduit en « migration à jouer », que l'exploitant lit dans /api/health.
 

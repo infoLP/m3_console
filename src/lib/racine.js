@@ -1,5 +1,5 @@
 /* La racine du dépôt, pour tout ce qui lit un fichier par chemin : config/
-   (baselines), migrations/, logs/, le gazetteer de src/generate.
+   (baselines), logs/.
 
    Un seul endroit, sans aucun import local, parce que log.js en a besoin et que
    store.js importe (via journal.js et db.js) log.js : le mettre dans store.js

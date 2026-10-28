@@ -67,15 +67,8 @@ test("résolution : aucun modèle du tout reste l'erreur d'avant, pas un refus d
     /Aucun modèle choisi/.test(err.message) && err.code !== "MODEL_NOT_ALLOWED");
 });
 
-/* Une installation neuve doit produire de vrais articles sans toucher à la
-   liste : le modèle que la migration 006 pose par défaut doit y figurer. Sinon
-   la liste blanche ferait retomber toute installation de référence sur le mock. */
-test("liste blanche : le modèle par défaut de la migration 006 est autorisé", async () => {
-  const sql = await readFile(new URL("../migrations/006_llm_providers.sql", import.meta.url), "utf8");
-  const seeded = sql.match(/\('openrouter',[^)]*'([^']+\/[^']+)'/);
-  assert.ok(seeded, "modèle par défaut d'OpenRouter introuvable dans la migration 006");
-  assert.equal(isModelAllowed(seeded[1]), true, `${seeded[1]} absent de la liste blanche`);
-});
+/* T26 : « le modèle par défaut de la migration 006 est autorisé » est au moteur,
+   propriétaire des migrations (M3 test/modelAllowlist.test.js). */
 
 /* ------------------------------------------- exemption d'OpenRouter — M3-68 */
 
