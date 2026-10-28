@@ -113,6 +113,21 @@ export const MOTEUR_PERIME_MS = 30_000;
    écrite par la console, servie par les deux côtés. */
 export const SITE_ICON_KEY = "site_icon";
 
+/* Clés kv que la console lit directement (R7, T24) : l'état de planification,
+   écrit par l'ordonnanceur du moteur, et le registre des dépenses LLM. */
+export const KV_PLANIFICATION = "schedule/state.json";
+export const KV_DEPENSES_LLM = "llm/spend.json";
+
+/* « 2026-10-12 » et « 2026-10 », à l'heure de Paris : les tranches du registre
+   des dépenses (KV_DEPENSES_LLM). fr-CA formate déjà en AAAA-MM-JJ, ce qui
+   évite de recomposer les parties à la main. Déplacé de src/llm/budget.js (R7). */
+const PARIS = new Intl.DateTimeFormat("fr-CA", { timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit" });
+
+export function periodKeys(now = Date.now()) {
+  const day = PARIS.format(new Date(now));
+  return { day, month: day.slice(0, 7) };
+}
+
 export function moteurVivant(etat, now = Date.now()) {
   const t = Date.parse(etat?.at ?? "");
   return Number.isFinite(t) && now - t <= MOTEUR_PERIME_MS;
