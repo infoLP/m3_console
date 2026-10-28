@@ -45,6 +45,10 @@ if (typeof mock.module !== "function") {
     namedExports: {
       enqueue: async (kind, params) => { deposes.push({ kind, params }); return { id: deposes.length, kind, duplicate: false }; },
       attendreJob: async () => ({ result: null, error: null }),
+      /* T20c : api/meta.js lit moteur/etat (llm) ; tout l'export du module simulé. */
+      getJob: async () => null,
+      lastJobs: async () => [],
+      lireEtatMoteur: async () => ({ vivant: true, llm: null, publication: { mode: "simulated", envConfigured: false } }),
     },
   });
 
