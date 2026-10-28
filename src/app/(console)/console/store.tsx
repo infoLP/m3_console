@@ -23,6 +23,8 @@ import {
 import * as client from "@/relireArticles/relireArticles.client";
 import { changerStatut, publier, regenerer, relireMoi, voirComme } from "@/relireArticles/relireArticles.action";
 import { messageRegeneration, type ChecksRegen } from "@/relireArticles/relireArticles.regen";
+import { lireDemande } from "@/suivreDemande/suivreDemande.action";
+import { delaiSondage, estFinie, messageEchec, texteAttente, type Demande } from "@/suivreDemande/suivreDemande.regles";
 import { calculsLigne, DELAI_PERSISTANCE_MS, fusionnerPatch, type Modification, type Patch } from "@/editerArticle/editerArticle.regles";
 import { patcherArticle } from "@/editerArticle/editerArticle.action";
 
@@ -195,6 +197,23 @@ export function ConsoleProvider({ moiInitial, indexInitial, sourcesInitiales, no
     await selectArticle(nid || filteredIndex(ref.current.index, ref.current.portee)[0]?.id || null);
   }, [flash, flushPersist, loadIndex, selectArticle]);
 
+  /* T19c : publication et régénération tournent dans le moteur. On suit la
+     demande jusqu'à sa fin ; tant qu'elle attend, on dit pourquoi (une
+     génération occupe la chaîne, le moteur ne répond pas). Rend la demande
+     close, ou null si le suivi a échoué (message déjà affiché). */
+  const suivre = useCallback(async (id: number, icone: string): Promise<Demande | null> => {
+    let dernier: string | null = null;
+    for (let tentative = 0; ; tentative++) {
+      const r = await lireDemande(id);
+      if (!r.ok) { flash(`Suivi interrompu : ${r.erreur}`, true); return null; }
+      if (estFinie(r.data)) return r.data;
+      const attente = texteAttente(r.data);
+      if (attente && attente !== dernier) flash(attente, false, icone);
+      dernier = attente;
+      await new Promise((ok) => setTimeout(ok, delaiSondage(tentative)));
+    }
+  }, [flash]);
+
   const publishArticle = useCallback(async (scheduledAt: string | null) => {
     const cible = ref.current.sel; if (!cible) return;
     if (writtenByMock(cible)) return flash(MOCK_PUBLISH_REFUSAL as string, true);
@@ -205,18 +224,26 @@ export function ConsoleProvider({ moiInitial, indexInitial, sourcesInitiales, no
     await flushPersist();
     const r = await publier(cible.id, scheduledAt);
     if (!r.ok) return flash(r.erreur, true);
-    setSel(r.data.article);
-    setIndex((idx) => ligneApresDecision(idx, r.data.article));
+    flash(scheduledAt ? "Parution en cours de planification…" : "Envoi en parution…", false, "Send");
+    const d = await suivre(r.data.job.id, "Send");
+    if (!d) return;
+    if (d.error) return flash(messageEchec(d) || d.error, true);
+    const relu = await client.article(cible.id).catch(() => null);
+    if (relu) {
+      setSel(relu);
+      setIndex((idx) => ligneApresDecision(idx, relu));
+    }
     /* « (simulé) » seulement si l'envoi l'était ; l'illustration qui n'a pas pu
        partir (M3-66) ne bloque pas la parution, mais se dit. */
-    const pub = (r.data.publication || {}) as { simulated?: boolean; sentAsDraft?: boolean; illustrationError?: string | null };
+    const res = (d.result || {}) as { simulated?: boolean; illustrationError?: string | null; publication?: { sentAsDraft?: boolean } };
+    const pub = { simulated: res.simulated, sentAsDraft: res.publication?.sentAsDraft, illustrationError: res.illustrationError };
     const envoi = scheduledAt ? "Parution planifiée"
       : pub.simulated === true ? "Envoyé en parution (simulé)"
       : pub.sentAsDraft ? "Envoyé sur WordPress en brouillon" : "Publié sur WordPress";
     if (pub.illustrationError) flash(`${envoi}, sans illustration : ${pub.illustrationError}`, true, "Send");
     else flash(envoi, false, "Send");
     await loadIndex();
-  }, [flash, flushPersist, loadIndex]);
+  }, [flash, flushPersist, loadIndex, suivre]);
 
   const regenerate = useCallback(async (alt: string | null, force: boolean) => {
     const cible = ref.current.sel; if (!cible) return;
@@ -224,20 +251,27 @@ export function ConsoleProvider({ moiInitial, indexInitial, sourcesInitiales, no
     flash("Génération en cours…", false, "RotateCcw");
     const r = await regenerer(cible.id, alt, force);
     if (!r.ok) return flash(r.erreur, true);
-    setSel(r.data);
-    setIndex((idx) => ligneApresDecision(idx, r.data));
+    const d = await suivre(r.data.job.id, "RotateCcw");
+    if (!d) return;
+    if (d.error) return flash(messageEchec(d) || d.error, true);
+    const relu = await client.article(cible.id).catch(() => null);
+    if (relu) {
+      setSel(relu);
+      setIndex((idx) => ligneApresDecision(idx, relu));
+    }
     await loadIndex();
-    if (r.data._llm && r.data._llm.degraded) {
+    const llm = ((d.result || {}) as { llm?: { degraded?: boolean; cap?: unknown; regen?: ChecksRegen | null } }).llm;
+    if (llm?.degraded) {
       const m = await relireMoi();
       if (m.ok) setMoi(m.data);
-      flash(r.data._llm.cap ? "Version régénérée en mock — plafond de dépense LLM atteint" : "Version régénérée — LLM indisponible, mode mock", true, "RotateCcw");
+      flash(llm.cap ? "Version régénérée en mock — plafond de dépense LLM atteint" : "Version régénérée — LLM indisponible, mode mock", true, "RotateCcw");
     } else {
       /* Relances après hallucination (M3-55) : une phrase de plus, en avertissement si le doute reste. */
-      const regen = (r.data._llm as { regen?: ChecksRegen | null } | null | undefined)?.regen;
+      const regen = llm?.regen;
       const relances = messageRegeneration(regen);
       flash(relances ? `Nouvelle version générée — ${relances}` : "Nouvelle version générée", !!relances && regen?.issue !== "ok");
     }
-  }, [flash, loadIndex]);
+  }, [flash, loadIndex, suivre]);
 
   /* « Voir comme » : honoré seulement pour un administrateur, le serveur
      renvoie sinon le rôle du compte. */
