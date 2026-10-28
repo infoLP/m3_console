@@ -7,7 +7,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { listeBlancheFurtif, lireListeBlanche, retirerDeListeBlanche, furtif, retirerFurtif } from "../src/api/sources.js";
-import { SOURCES_STATE_KEY } from "../src/ingest/harvestRun.js";
+import { KV_ETAT_SOURCES as SOURCES_STATE_KEY } from "../shared/contrat.js";
 
 const MAINTENANT = Date.parse("2026-10-27T10:00:00.000Z");
 const JOUR = 86400000;

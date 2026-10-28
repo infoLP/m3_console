@@ -23,7 +23,7 @@
 import { randomUUID } from "node:crypto";
 import { query, closePool } from "../src/lib/db.js";
 import { hashPassword, deleteUserSessions } from "../src/lib/auth.js";
-import { isMain } from "../src/lib/main.js";
+import { isMain } from "./estPrincipal.js";
 
 const ROLES = ["administrateur", "super_utilisateur", "relecteur"];
 

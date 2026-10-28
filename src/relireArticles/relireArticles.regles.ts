@@ -483,9 +483,10 @@ export function deptParDefaut(index: Ligne[], dd: string | null | undefined, zon
    - non mesuré   : contrôle désactivé, non lancé, sans matière, ou donnée non
      conservée. Jamais en vert. */
 
-/* Recopie de SOURCE_LISIBLE_MIN (src/generate/finalize.js) : la console ne
-   peut pas importer la chaîne de génération. Les deux doivent rester égales. */
-export const SOURCE_LISIBLE_MIN = 200;
+/* Seuil de lisibilité de la source : celui de la chaîne de génération, lu dans
+   le contrat (T26) plutôt que recopié. */
+import { SOURCE_LISIBLE_MIN } from "@shared/contrat.js";
+export { SOURCE_LISIBLE_MIN };
 
 export type EtatPreuve = "conforme" | "non_conforme" | "a_verifier" | "non_mesure";
 export type Famille = "parution" | "generation" | "fidelite" | "contexte";

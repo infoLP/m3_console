@@ -118,6 +118,28 @@ export const SITE_ICON_KEY = "site_icon";
 export const KV_PLANIFICATION = "schedule/state.json";
 export const KV_DEPENSES_LLM = "llm/spend.json";
 
+/* Autres clés kv et seuil que la console lit sans importer le moteur (T26) :
+   - KV_ETAT_SOURCES : état de récolte par source (furtif, quarantaine), écrit
+     par harvestRun, lu et retouché par l'écran Sources ;
+   - KV_VERROU_SCAN : bail « competitors » du scan des concurrents
+     (src/lib/runLock.js écrit locks/<nom>.json), lu pour dire « scan en cours » ;
+   - KV_PLANIF_CONCURRENTS : dernier créneau du scan planifié ;
+   - SOURCE_LISIBLE_MIN : signes de texte source en dessous desquels finalize
+     saute les contrôles de citations et de lieux, et la console dit « source
+     mince » dans les preuves. */
+export const KV_ETAT_SOURCES = "harvest/sources-state.json";
+export const KV_VERROU_SCAN = "locks/competitors.json";
+export const KV_PLANIF_CONCURRENTS = "schedule/competitors.json";
+export const SOURCE_LISIBLE_MIN = 200;
+
+/* Clés des consignes que rend la relecture (src/llm/prompts/review.js,
+   CLES_CONSIGNES), dans son ordre : le panneau Preuves de la console les
+   affiche. Chaque côté vérifie sa liste contre celle-ci. */
+export const CLES_CONSIGNES_RELECTURE = Object.freeze([
+  "style_phrases_creuses", "chapo_factuel", "fin_concrete", "angle",
+  "communique_non_explique", "date_redigee", "partenaire_signale",
+]);
+
 /* « 2026-10-12 » et « 2026-10 », à l'heure de Paris : les tranches du registre
    des dépenses (KV_DEPENSES_LLM). fr-CA formate déjà en AAAA-MM-JJ, ce qui
    évite de recomposer les parties à la main. Déplacé de src/llm/budget.js (R7). */

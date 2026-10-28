@@ -10,7 +10,7 @@ import { readFile } from "node:fs/promises";
 
 import {
   ALLOWED_MODELS, allowlistApplies, isModelAllowed, isModelAllowedFor, isModelSavable, resolveAllowedModel,
-} from "../src/llm/allowlist.js";
+} from "../shared/allowlist.js";
 
 const REF = "mistralai/mistral-small-2603";
 const provider = (defaultModel) => ({ id: "openrouter", label: "OpenRouter", defaultModel });
@@ -184,16 +184,16 @@ test("enregistrement : sans modèle dans le patch, rien à juger", () => withEnv
    touchent la base ou le réseau. Une régression qui remettrait le contrôle
    d'avant M3-68 (isModelAllowed seul) dans l'un des trois points de contrôle
    passerait tous les tests sans ce relevé du source. */
-test("câblage : les trois points de contrôle tiennent compte de l'exemption", async () => {
+test("câblage : les points de contrôle de la console tiennent compte de l'exemption", async () => {
   const src = (p) => readFile(new URL(`../src/${p}`, import.meta.url), "utf8");
-  const [api, index, providers] = await Promise.all([src("api/llm.js"), src("llm/index.js"), src("lib/llmProviders.js")]);
+  /* T26 : l'appel de génération (src/llm/index.js) est au moteur, dont le test
+     garde sa propre assertion (M3 test/modelAllowlist.test.js). */
+  const [api, providers] = await Promise.all([src("api/llm.js"), src("lib/llmProviders.js")]);
   /* T20c : le test de connexion est fait par le moteur (demande test_llm, qui
      applique isModelAllowedFor : M3 src/jobs/taches/test_llm.js, test/llmTaches.test.js).
      La console dépose la demande ; elle ne doit pas revenir au contrôle seul. */
   assert.match(api, /demander\("test_llm"/, "test de connexion : déposé au moteur");
   assert.doesNotMatch(api, /[^.\w]isModelAllowed\(/, "test de connexion : isModelAllowed seul");
-  /* `engine` depuis M3-88 : le moteur qui sert l'appel (principal, secours, relecture). */
-  assert.match(index, /resolveAllowedModel\(engine, opts\.model\)/, "appel de génération");
   assert.match(providers, /isModelSavable\(patch, /, "enregistrement");
   assert.match(providers, /modelAllowed: isModelAllowedFor\(r, r\.defaultModel\)/, "affichage");
 });

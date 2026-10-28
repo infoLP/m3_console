@@ -33,7 +33,6 @@ COPY --from=build --chown=node:node /app/public ./public
 # Lus par chemin à l'exécution (le traçage de Next ne les voit pas).
 COPY --chown=node:node config ./config
 COPY --chown=node:node migrations ./migrations
-COPY --chown=node:node src/generate/communes.fr.json ./src/generate/communes.fr.json
 # Outils d'exploitation (T25c, R12) : créer le premier administrateur, lever un
 # bannissement, par « docker exec <conteneur> node outils-console/userAdmin.js … ».
 # Ils n'importent que src/lib (db, log, redact, racine, auth, main, ipBan,
