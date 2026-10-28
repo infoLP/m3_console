@@ -59,6 +59,7 @@ if (typeof mock.module !== "function") {
   const store = await import(new URL("lib/store.js", root).href);
   const { coutRoutines } = await import(new URL("consulterCoutRoutines/coutRoutines.api.js", root).href);
   const ops = await import(new URL("api/ops.js", root).href);
+  const { KV_PLANIFICATION, KV_DEPENSES_LLM, periodKeys } = await import(new URL("../shared/contrat.js", root).href);
 
   const routines = () => store.readCollection("routines");
   const reset = (s = {}) => { kv.clear(); settings = new Map(Object.entries(s)); reads = []; };
@@ -189,5 +190,40 @@ if (typeof mock.module !== "function") {
     const fermee = await appel(ops.lastRun, { role: "relecteur" });
     assert.equal(fermee.runs[0].stats.usage.cost, undefined, "défaut administrateur : masqué au relecteur");
     assert.equal((await appel(ops.lastRun, { role: "super_utilisateur" })).runs[0].stats.usage.cost, undefined, "et au super utilisateur");
+  });
+
+  /* T24 : la console ne lit plus le moteur, mais la kv qu'il écrit
+     (KV_PLANIFICATION, KV_DEPENSES_LLM du contrat). */
+  test("planification : réglages de la console, état d'exécution lu dans la kv du moteur", async () => {
+    reset({ schedule_enabled: "oui", schedule_times: "06:30, 18:00" });
+    const lastRunMoteur = { slot: "2026-10-28 06:30", harvest: { items: 4 }, generation: { created: 2 } };
+    kv.set(KV_PLANIFICATION, { lastSlot: "2026-10-28 06:30", running: null, lastRun: lastRunMoteur });
+    const s = await ops.scheduleStatus(Date.parse("2026-10-28T10:00:00Z"));
+    assert.equal(s.enabled, true);
+    assert.deepEqual(s.times, ["06:30", "18:00"]);
+    assert.equal(s.error, null);
+    assert.ok(s.next, "prochain créneau calculé côté console");
+    assert.equal(s.lastSlot, "2026-10-28 06:30");
+    assert.deepEqual(s.lastRun, lastRunMoteur);
+    assert.ok(reads.includes(KV_PLANIFICATION));
+    const out = await appel(ops.lastRun, { role: "administrateur" });
+    assert.deepEqual(out.schedule.lastRun, lastRunMoteur);
+  });
+
+  test("planification coupée, kv vide : rien d'inventé", async () => {
+    reset();
+    const s = await ops.scheduleStatus();
+    assert.equal(s.enabled, false);
+    assert.equal(s.next, null);
+    assert.equal(s.lastRun, null);
+  });
+
+  test("coût des routines : le registre du moteur est lu dans la kv, à la tranche du jour", async () => {
+    reset({ feat_cout_routines_min_role: "relecteur" });
+    const now = Date.parse("2026-10-28T10:00:00Z");
+    const { day, month } = periodKeys(now);
+    kv.set(KV_DEPENSES_LLM, { days: { [day]: { cost: 0.12, totalTokens: 900 } }, months: { [month]: { cost: 1.5, totalTokens: 12000 } } });
+    const out = await appel((ctx) => coutRoutines({ ...ctx, now }), { role: "administrateur" });
+    assert.deepEqual(out.registre, { jour: { cout: 0.12, tokens: 900 }, mois: { cout: 1.5, tokens: 12000 } });
   });
 }
