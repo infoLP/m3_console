@@ -1,6 +1,7 @@
 /* M3-84 — un texte écrit par le générateur de secours (mock) ne part pas en
-   parution. Routes réelles (src/api/articles.js), base simulée par `mock.module`,
-   qui exige l'option --experimental-test-module-mocks : `npm test` saute ce
+   parution. Routes réelles (src/api/articles.js), base simulée par `mock.module`.
+   T19c : la route accepte en déposant la demande « publish » (le moteur envoie) ;
+   un refus ne dépose rien. `mock.module` exige l'option --experimental-test-module-mocks : `npm test` saute ce
    fichier, `npm run test:wiring` le lance. */
 
 import test, { mock } from "node:test";
@@ -20,7 +21,7 @@ if (typeof mock.module !== "function") {
 } else {
   const root = new URL("../../src/", import.meta.url);
   const articles = new Map();
-  let published = 0;
+  const deposes = [];
 
   /* Toutes les exportations de store.js : articles.js importe aussi pipeline.js et
      rescore.js, qui en lisent d'autres. Seules les deux premières servent ici. */
@@ -42,8 +43,11 @@ if (typeof mock.module !== "function") {
   mock.module(new URL("lib/db.js", root).href, {
     namedExports: { query: q, withTransaction: async (fn) => fn({ query: q }), closePool: async () => {}, getPool: () => ({}) },
   });
-  mock.module(new URL("publish/simulated.js", root).href, {
-    namedExports: { publish: async () => { published++; return { scheduledAt: null, publishedAt: new Date().toISOString(), url: "x" }; } },
+  mock.module(new URL("lib/demandes.js", root).href, {
+    namedExports: {
+      enqueue: async (kind, params) => { deposes.push({ kind, params }); return { id: deposes.length, kind, duplicate: false }; },
+      attendreJob: async () => ({ result: null, error: null }),
+    },
   });
 
   const A = await import(new URL("api/articles.js", root).href);
@@ -58,7 +62,7 @@ if (typeof mock.module !== "function") {
   test("texte du mock : parution et validation refusées (409), classement permis", async () => {
     put("m", "mock");
     let r = await call(A.publish, { params: ["m"], body: {} });
-    assert.equal(r.status, 409); assert.match(r.body.error, /sans LLM/); assert.equal(published, 0);
+    assert.equal(r.status, 409); assert.match(r.body.error, /sans LLM/); assert.equal(deposes.length, 0);
     r = await call(A.setStatus, { params: ["m"], body: { status: "valide" } });
     assert.equal(r.status, 409);
     r = await call(A.setStatus, { params: ["m"], body: { status: "publie" } });
@@ -75,11 +79,26 @@ if (typeof mock.module !== "function") {
     const r = await call(A.regenerate, { params: ["hz"], body: {} });
     assert.equal(r.status, 409);
     assert.equal(r.body.code, "hors_zone");
+    assert.equal(deposes.length, 0, "rien de déposé");
   });
 
-  test("texte d'un vrai LLM : parution acceptée", async () => {
+  /* T19c : acceptée, la régénération part au moteur avec la date de l'article lu,
+     pour qu'il n'écrase pas une édition faite entre-temps. */
+  test("régénération acceptée : demande « regenerate » déposée avec updatedAt", async () => {
+    articles.set("rg", { id: "rg", status: "a_revoir", provider: "openrouter", title: "t", chapo: "", body: [], seo: {}, zone: {}, updatedAt: "2026-10-28T10:00:00.000Z" });
+    const r = await call(A.regenerate, { params: ["rg"], body: { altPrompt: "plus court" } });
+    assert.equal(r.status, 202);
+    const d = deposes.at(-1);
+    assert.equal(d.kind, "regenerate");
+    assert.deepEqual(d.params, { articleId: "rg", altPrompt: "plus court", updatedAt: "2026-10-28T10:00:00.000Z" });
+    deposes.length = 0;
+  });
+
+  test("texte d'un vrai LLM : parution acceptée, demande « publish » déposée", async () => {
     put("r", "openrouter");
     const r = await call(A.publish, { params: ["r"], body: {} });
-    assert.equal(r.status, 200); assert.equal(published, 1);
+    assert.equal(r.status, 202); assert.equal(r.body.job.kind, "publish");
+    assert.deepEqual(deposes.map((d) => d.kind), ["publish"]);
+    assert.equal(deposes[0].params.articleId, "r");
   });
 }

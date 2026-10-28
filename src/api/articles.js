@@ -2,13 +2,9 @@ import { send } from "../lib/http.js";
 import { readArticle, writeArticle, readIndex, readHistory, pushCollection, clearArticles } from "../lib/store.js";
 import { readSettings } from "../lib/yamlStore.js";
 import { scoreSummary } from "../../shared/scoring.js";
-import { zoneClassOf, STATUS_ORDER, can, asBlocks, plainText, writtenByMock, MOCK_PUBLISH_REFUSAL } from "../../shared/model.js";
-import { enqueue } from "../jobs/queue.js";
-import { rescore } from "../tools/rescore.js";
-import { coveredOf, coverageLabel } from "../../shared/zones.js";
-import { partnerContent, partnerFlag, sourceSignsOf } from "../generate/quality.js";
-import { publish as publishArticle } from "../publish/index.js";
-import { targetForPublish } from "./wpTargets.js";
+import { zoneClassOf, STATUS_ORDER, can, asBlocks, writtenByMock, MOCK_PUBLISH_REFUSAL } from "../../shared/model.js";
+import { enqueue, attendreJob } from "../lib/demandes.js";
+import { coveredOf } from "../../shared/zones.js";
 import { illustrationMissing, ILLUSTRATION_REFUSAL, featsFor } from "../../shared/feats.js";
 
 const EDITABLE = new Set([
@@ -127,107 +123,30 @@ export async function setStatus({ res, params, body, role, user }) {
   send(res, 200, a);
 }
 
-export async function regenerate({ res, params, body }) {
+/* Régénération (T19c) : refus préalables ici, le travail dans le worker
+   (demande « regenerate », src/jobs/taches/regenerate.js dans M3). 202 + la
+   demande ; le navigateur la suit (lireDemande). `updatedAt` part avec la
+   demande : le moteur n'écrase pas un article modifié entre-temps. */
+export async function regenerate({ res, params, body, user }) {
   const a = await readArticle(params[0]);
   if (!a) return send(res, 404, { error: "article introuvable" });
   if (purged(a, res)) return;
   const settings = await readSettings();
-  const covered = coveredOf(settings);
   /* Hors zone (M3-85) : régénérer, c'est payer un article qu'on ne publiera pas.
      Refusé sauf confirmation explicite (`force`) — le relecteur peut avoir une
      raison, la console la lui demande. Sans objet si l'administrateur a choisi de
-     générer hors zone. Aucun appel LLM avant ce contrôle. */
-  if (!body.force && settings.generate_out_of_zone !== "oui" && zoneClassOf(a.zone, covered) === "nonhab") {
+     générer hors zone. Aucune demande déposée avant ce contrôle. */
+  if (!body.force && settings.generate_out_of_zone !== "oui" && zoneClassOf(a.zone, coveredOf(settings)) === "nonhab") {
     return send(res, 409, { code: "hors_zone", error: "Sujet hors des zones couvertes : classez-le sans diffusion plutôt que de payer une nouvelle génération." });
   }
-  const { extractFromSource, providerName, llmStats, resetLlmStats } = await import("../llm/index.js");
-  const { genererEtRelire, notificationHallucination } = await import("../generate/relance.js");
-
-  await resetLlmStats();
-  const rawText = a.origin?.rawText || plainText(a);
-  const partner = partnerContent(rawText);
-  /* L'extraction gardée est réutilisée — sauf si c'est le mock qui l'a faite (il
-     marque la sienne `_sourceType`) : ses « citations » sont des phrases de la
-     source attribuées à « un porte-parole ». Le 13/10, le titre d'un supplément est
-     ressorti ainsi, entre guillemets, comme la parole d'un porte-parole. */
-  const cached = a.origin?.extracted;
-  const extracted = cached && !cached._sourceType ? cached : await extractFromSource(rawText, { sourceType: a.source?.type });
-  if (extracted !== cached && a.origin) a.origin.extracted = extracted;
-  /* Même suite que le pipeline (src/generate/relance.js) : génération,
-     finalisation, relecture automatique (M3-89) de la nouvelle version — et
-     longueur / règles recalculées (M3-86, M3-87), sinon la grille jugerait le
-     nouveau texte sur la fenêtre et les écarts de l'ancien —, puis relances sur
-     hallucination (M3-55). Pas d'anti-plagiat ici, comme avant. */
-  const r = await genererEtRelire({
-    extracted, rawText,
-    genOpts: {
-      mode: a.mode, region: coverageLabel(covered), altPrompt: body.altPrompt || null, rules: settings,
-      publishedAt: a.origin?.publishedAt || a.checks?.date?.detected || null, partner: partner.partner,
-      // M3-86 : la même cible de longueur qu'à la génération, mesurée sur la source
-      sourceSigns: sourceSignsOf(rawText),
-    },
-    finalizeCtx: {
-      rawText: a.origin?.rawText || plainText(a),
-      publishedAt: a.origin?.publishedAt || null,
-      sourceZone: a.zone || {},
-      extractedLocality: extracted.locality,
-      titleHint: extracted.title_hint,
-      // état de la source (M3-107, C1)
-      sourceName: a.source?.label || null, sourceUrl: a.source?.url || a.origin?.sourceUrl || null, extracted,
-      settings,
-    },
-    plagiarism: false,
-    settings,
-    source: { name: a.source?.label, url: a.source?.url || a.origin?.sourceUrl },
-  });
-  const { gen, fin, review } = r;
-  const degraded = llmStats.fallbacks > 0 && llmStats.configured !== "mock";
-
-  a.title = gen.title;
-  a.chapo = gen.chapo;
-  a.body = gen.body;
-  a.cat = gen.category || a.cat;
-  a.zone = fin.zone;
-  a.zoneClass = fin.zoneClass;
-  a.ranking = Math.max(0, Math.min(100, Math.round(Number(gen.suggested_ranking) || a.ranking)));
-  a.rankingReason = gen.ranking_reason || a.rankingReason;
-  a.seo = {
-    metaTitle: gen.seo.metaTitle || a.seo.metaTitle,
-    metaDescription: gen.seo.metaDescription || a.seo.metaDescription,
-    slug: gen.seo.slug || a.seo.slug,
-    keywords: gen.seo.keywords?.length ? gen.seo.keywords : a.seo.keywords,
-  };
-  /* La trace des relances de l'ANCIENNE version ne décrit pas la nouvelle. */
-  const { regen: _ancienne, ...oldChecks } = a.checks || {};
-  a.checks = {
-    ...oldChecks, date: fin.checks.date, geo: fin.checks.geo, category: fin.checks.category,
-    length: fin.checks.length, rules: fin.checks.rules, review: review || null,
-    // M3-107 (C1) : état de la source pour CETTE version, pas celui de l'ancienne
-    sources: fin.checks.sources,
-    // M3-56 : prompt de génération qui a servi à cette version, null en mock
-    prompt: gen.prompt || null,
-    // M3-55 : relances sur hallucination, seulement si l'une a été engagée
-    ...(r.regen ? { regen: r.regen } : {}),
-  };
-  const pf = partnerFlag(partner);
-  a.flags = pf ? [...fin.flags, pf] : fin.flags;
-  a.flags.push(...r.flags);
-  a.status = a.flags.length ? "signale" : "a_revoir";
-  // le moteur qui a réellement rédigé : relance (M3-55), mock (repli), secours (M3-88) ou principal
-  a.provider = r.moteur ? r.moteur.id : degraded ? "mock" : llmStats.secoursCalls > 0 && llmStats.switch ? llmStats.switch.to.id : providerName();
-  a.providerConfigured = llmStats.configured;
-  a.scores = scoreSummary(a, settings);
-  a.regeneratedAt = new Date().toISOString();
-  await writeArticle(a);
-  if (r.regen?.issue === "hallucination_persistante") {
-    await pushCollection("notifications", notificationHallucination({
-      articleId: a.id, sourceId: a.origin?.sourceId || null, sourceName: a.source?.label || null,
-      url: a.source?.url || a.origin?.sourceUrl || null, regen: r.regen, review,
-    }));
-  }
-  send(res, 200, { ...a, _llm: { degraded, error: llmStats.lastError, cap: llmStats.capHit, regen: r.regen || null } });
+  const job = await enqueue("regenerate", { articleId: a.id, altPrompt: body.altPrompt || null, updatedAt: a.updatedAt || null }, user);
+  send(res, 202, { ok: true, job });
 }
 
+/* Publication (T19c) : refus préalables ici, l'envoi dans le worker (demande
+   « publish », voie « articles » : elle n'attend pas derrière une génération).
+   Le moteur refait les refus et refuse un article déjà publié : un second clic
+   n'envoie pas deux fois. 202 + la demande ; le navigateur la suit. */
 export async function publish({ res, params, body, role, user }) {
   const a = await readArticle(params[0]);
   if (!a) return send(res, 404, { error: "article introuvable" });
@@ -236,46 +155,14 @@ export async function publish({ res, params, body, role, user }) {
   if (writtenByMock(a)) return send(res, 409, { error: MOCK_PUBLISH_REFUSAL });
   const settings = await readSettings();
   if (illustrationMissing(a, role, settings)) return send(res, 409, { code: "illustration", error: ILLUSTRATION_REFUSAL });
-
-  /* Où part l'article (M3-53) : nulle part tant que M3_PUBLISH_MODE n'est pas
-     « wordpress » ; sinon la cible par défaut de l'onglet Publication. */
-  let record;
-  try {
-    const { mode, target } = await targetForPublish(settings, body.targetId ?? null);
-    if (mode === "wordpress") {
-      /* WordPress mettrait lui-même en ligne un article « programmé » à l'heure dite,
-         sans repasser par le contrôle des critères que publishDue refait à ce moment
-         (M3-72). Tant que l'envoi n'est pas fait par publishDue, on refuse. */
-      if (body.scheduledAt) {
-        return send(res, 409, { error: "La parution programmée n'est pas encore disponible avec WordPress : envoyer l'article maintenant (en brouillon ou en ligne selon la cible), ou repasser en publication simulée." });
-      }
-      if (a.publication?.wpId) {
-        return send(res, 409, { error: `Cet article a déjà été envoyé sur WordPress (n° ${a.publication.wpId}) : le modifier ou le retirer côté WordPress.` });
-      }
-    }
-    record = await publishArticle(a, settings, {
-      scheduledAt: body.scheduledAt || null,
-      by: user?.login || user?.name || "inconnu",
-      byRole: role,
-      target,
-    });
-  } catch (e) {
-    /* Refus de configuration (409, 503) ou échec côté WordPress : on le dit, l'article n'est pas touché. */
-    return send(res, e.name === "WpError" ? 502 : e.status || 409, { error: e.message });
+  if (a.publication?.wpId) {
+    return send(res, 409, { error: `Cet article a déjà été envoyé sur WordPress (n° ${a.publication.wpId}) : le modifier ou le retirer côté WordPress.` });
   }
-  a.status = record.scheduledAt ? "valide" : "publie";
-  const scheduledAt = record.scheduledAt;
-  a.publication = {
-    scheduledAt, publishedAt: record.publishedAt, url: record.url,
-    ...(record.simulated ? {} : { wpId: record.wpId, wpStatus: record.wpStatus, sentAsDraft: !!record.sentAsDraft, targetName: record.targetName || null }),
-  };
-  /* La décision est datée du GESTE, pas de la parution : une parution planifiée
-     au 30 est décidée aujourd'hui. `publication.scheduledAt` porte l'autre date,
-     et l'Historique affiche les deux. */
-  a.decision = decisionOf(a.status, user, role);
-  a.reviewer = user?.name || a.reviewer || null;
-  await writeArticle(a);
-  send(res, 200, { article: a, publication: record });
+  const par = user ? { id: user.id || null, name: user.name || null, login: user.login || null, role: user.role || null } : null;
+  const job = await enqueue("publish", {
+    articleId: a.id, targetId: body.targetId ?? null, scheduledAt: body.scheduledAt || null, user: par, role,
+  }, user);
+  send(res, 202, { ok: true, job });
 }
 
 /* Déposée au worker, qui l'exécute sous le verrou « chain » (M3-58) : cf.
@@ -306,16 +193,16 @@ export async function purgeArticles({ res, body, role, user }) {
    back-office. Utile après un changement des seuils (onglet Paramètres) : la
    liste de la console lit le score écrit à la génération, la fiche le recalcule
    à l'affichage, et les deux divergent tant que le stock n'est pas repris.
-   Même fonction que l'outil en ligne de commande, pas un second processus.
+   Même fonction que l'outil en ligne de commande, exécutée par le worker
+   (demande « rescore », T19c), qui trace le run. Attendue ici (quelques
+   secondes) ; au-delà, 504 : la demande continue, résultat dans les dernières.
    Sans danger : seul `scores` est réécrit, `updatedAt` n'est pas touché. */
-export async function rescoreArticles({ res, role }) {
+export async function rescoreArticles({ res, role, user }) {
   if (!can(role, "manage_sources")) return send(res, 403, { error: "réservé à l'administrateur" });
-  const r = await rescore({ log: () => {} });
-  await pushCollection("runs", {
-    id: `run-${Date.now()}`, kind: "rescore", at: new Date().toISOString(),
-    stats: { total: r.total, changed: r.changed, role },
-  });
-  send(res, 200, { ok: true, ...r });
+  const job = await enqueue("rescore", { role }, user);
+  const fini = await attendreJob(job.id, { delaiMs: 60_000 });
+  if (fini.error) return send(res, 502, { error: fini.error });
+  send(res, 200, { ok: true, ...(fini.result || {}) });
 }
 
 /* Onglet Historique : les articles publiés, en attente de parution et archivés,

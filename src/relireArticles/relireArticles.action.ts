@@ -16,10 +16,13 @@ import { journalConsole } from "@/lib/journal.js";
 import type { Moi } from "@/seConnecter/seConnecter.regles";
 import { controlerParution, STATUTS_PARUTION, type Article } from "./relireArticles.regles";
 import { lireArticle } from "./relireArticles.requetes";
+import type { Demande } from "@/suivreDemande/suivreDemande.regles";
 
 const statut = action<Article>(articles.setStatus);
-const parution = action<{ article: Article; publication: unknown }>(articles.publish);
-const regen = action<Article>(articles.regenerate);
+/* T19c : publication et régénération tournent dans le moteur ; la route rend
+   202 et la demande, que le navigateur suit (suivreDemande). */
+const parution = action<{ ok: boolean; job: Demande }>(articles.publish);
+const regen = action<{ ok: boolean; job: Demande }>(articles.regenerate);
 const lue = action<{ ok: boolean }>(meta.readNotification);
 const moi = action<Moi>(meta.me);
 
