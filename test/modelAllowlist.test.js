@@ -187,7 +187,10 @@ test("enregistrement : sans modèle dans le patch, rien à juger", () => withEnv
 test("câblage : les trois points de contrôle tiennent compte de l'exemption", async () => {
   const src = (p) => readFile(new URL(`../src/${p}`, import.meta.url), "utf8");
   const [api, index, providers] = await Promise.all([src("api/llm.js"), src("llm/index.js"), src("lib/llmProviders.js")]);
-  assert.match(api, /isModelAllowedFor\(p, p\.defaultModel\)/, "test de connexion");
+  /* T20c : le test de connexion est fait par le moteur (demande test_llm, qui
+     applique isModelAllowedFor : M3 src/jobs/taches/test_llm.js, test/llmTaches.test.js).
+     La console dépose la demande ; elle ne doit pas revenir au contrôle seul. */
+  assert.match(api, /demander\("test_llm"/, "test de connexion : déposé au moteur");
   assert.doesNotMatch(api, /[^.\w]isModelAllowed\(/, "test de connexion : isModelAllowed seul");
   /* `engine` depuis M3-88 : le moteur qui sert l'appel (principal, secours, relecture). */
   assert.match(index, /resolveAllowedModel\(engine, opts\.model\)/, "appel de génération");
