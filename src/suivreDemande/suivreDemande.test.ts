@@ -39,9 +39,11 @@ describe("suivre une demande", () => {
   it("attenteDe : lit la voie de la demande dans moteur/etat, sans se citer elle-même", async () => {
     const etat = { vivant: true, voies: { chaine: { occupee: true, demande: { id: 4, kind: "generate", depuis: "t" } }, articles: { occupee: false, demande: null } } };
     const lire = async () => etat;
-    assert.deepEqual(await attenteDe({ id: 9, kind: "regenerate", startedAt: null, finishedAt: null }, lire),
+    assert.deepEqual(await attenteDe({ id: 9, kind: "harvest", startedAt: null, finishedAt: null }, lire),
       { vivant: true, voie: "chaine", enCours: { id: 4, kind: "generate", depuis: "t" } });
     assert.deepEqual(await attenteDe({ id: 10, kind: "publish", startedAt: null, finishedAt: null }, lire), { vivant: true, voie: "articles", enCours: null });
+    /* R14 : la régénération attend dans la voie articles, plus derrière une génération. */
+    assert.deepEqual(await attenteDe({ id: 11, kind: "regenerate", startedAt: null, finishedAt: null }, lire), { vivant: true, voie: "articles", enCours: null });
     assert.equal(await attenteDe({ id: 4, kind: "generate", startedAt: "t", finishedAt: null }, lire), null);
   });
 });

@@ -89,12 +89,12 @@ if (typeof mock.module !== "function") {
     const out = await appel(ops.lastRun, { role: "administrateur" });
     const json = JSON.stringify(out);
     assert.ok(!/"cost"/.test(json), "aucun champ cost");
-    assert.ok(!/ds?$/.test(json), "aucun montant en dollars, même dans un texte : " + json.match(/.{30}$.{10}/)?.[0]);
+    assert.ok(!/\d\s?\$/.test(json), "aucun montant en dollars, même dans un texte : " + json.match(/.{30}\$.{10}/)?.[0]);
     assert.ok(!/"used"|"cap":0/.test(json), "plafond en $ sans montants");
     const g = out.runs[0].stats;
     assert.equal(g.usage.totalTokens, 41000, "les tokens restent");
     assert.equal(g.created, 2, "les compteurs restent");
-    assert.match(g.cap.detail, /[montant masqué]/);
+    assert.match(g.cap.detail, /\[montant masqué\]/);
   });
 
   test("Dernière récupération, FEAT ouverte au rôle : les coûts restent", async () => {

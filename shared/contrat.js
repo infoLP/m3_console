@@ -20,14 +20,10 @@ export const JOB_KINDS = [
    l'interactive ; la voie « fond » (R9) porte le scan des concurrents, qui peut
    durer une heure et ne doit retenir ni la récolte ni la génération demandées
    depuis la console. Aucune n'est bloquée par une autre. La voie n'est pas en base :
-   la changer ne demande pas de migration.
-
-   regenerate reste dans la chaîne : les compteurs LLM et le moteur courant
-   sont globaux au processus, une régénération en parallèle d'une génération
-   fausserait ses comptes (isolation prévue en T32). */
+   la changer ne demande pas de migration. */
 export const VOIES = {
-  chaine: ["harvest", "generate", "test_models", "rescore", "restore_sources", "regenerate"],
-  articles: ["publish"],
+  chaine: ["harvest", "generate", "test_models", "rescore", "restore_sources"],
+  articles: ["publish", "regenerate"],
   fond: ["competitor_scan"],
   interactive: ["test_source", "test_wp_target", "test_llm", "fetch_models", "preview_prompt", "resolve_communes"],
 };
