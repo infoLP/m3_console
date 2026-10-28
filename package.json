@@ -15,6 +15,9 @@
     "lint": "eslint --cache --cache-location .next/cache/eslint/",
     "test": "node --experimental-test-module-mocks --import tsx --test \"test/*.test.js\" \"test/wiring/*.test.js\" \"src/**/*.test.ts\"",
     "check": "node scripts/check.mjs",
+    "user:list": "node outils-console/userAdmin.js --list",
+    "user:set": "node outils-console/userAdmin.js --set",
+    "user:delete": "node outils-console/userAdmin.js --delete",
     "check:rapide": "node scripts/check.mjs --rapide"
   },
   "dependencies": {

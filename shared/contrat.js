@@ -13,22 +13,40 @@ export const JOB_KINDS = [
   "test_source", "test_wp_target", "test_llm", "fetch_models", "preview_prompt", "resolve_communes",
 ];
 
-/* Deux voies, deux boucles dans le worker. La chaîne porte le long (une
+/* Quatre voies, quatre boucles dans le worker. La chaîne porte le long (une
    génération peut durer 20 min) ; l'interactive porte ce qu'un écran attend
-   (≤ 30-45 s) et n'est jamais bloquée par la chaîne. La voie n'est pas en base :
-   la changer ne demande pas de migration. */
+   (≤ 30-45 s) ; la voie « articles » (R6, T19) porte la publication d'un
+   article (≤ 2 min), qui n'attend ni derrière une génération ni ne retient
+   l'interactive ; la voie « fond » (R9) porte le scan des concurrents, qui peut
+   durer une heure et ne doit retenir ni la récolte ni la génération demandées
+   depuis la console. Aucune n'est bloquée par une autre. La voie n'est pas en base :
+   la changer ne demande pas de migration.
+
+   regenerate reste dans la chaîne : les compteurs LLM et le moteur courant
+   sont globaux au processus, une régénération en parallèle d'une génération
+   fausserait ses comptes (isolation prévue en T32). */
 export const VOIES = {
-  chaine: ["harvest", "generate", "test_models", "rescore", "competitor_scan", "restore_sources", "regenerate", "publish"],
+  chaine: ["harvest", "generate", "test_models", "rescore", "restore_sources", "regenerate"],
+  articles: ["publish"],
+  fond: ["competitor_scan"],
   interactive: ["test_source", "test_wp_target", "test_llm", "fetch_models", "preview_prompt", "resolve_communes"],
 };
 
 export function voieDe(kind) {
-  return VOIES.interactive.includes(kind) ? "interactive" : "chaine";
+  if (VOIES.interactive.includes(kind)) return "interactive";
+  if (VOIES.articles.includes(kind)) return "articles";
+  if (VOIES.fond.includes(kind)) return "fond";
+  return "chaine";
 }
 
 export const INTERVALLE_CHAINE_MS = 5000;
+export const INTERVALLE_ARTICLES_MS = 2000;
+/* Fond : pas de délai maximal, un scan borne lui-même ses appels. */
+export const INTERVALLE_FOND_MS = 10_000;
 export const INTERVALLE_INTERACTIVE_MS = 750;
-/* Au-delà, la voie interactive clôt la demande en échec et passe à la suivante. */
+/* Au-delà, la voie clôt la demande en échec et passe à la suivante (la tâche,
+   elle, n'est pas interrompue : chacune borne ses propres appels). */
+export const DELAI_MAX_ARTICLES_MS = 5 * 60_000;
 export const DELAI_MAX_INTERACTIVE_MS = 60_000;
 /* Ce qu'une route de la console attend une demande interactive avant de rendre la main. */
 export const ATTENTE_INTERACTIVE_MS = 45_000;
@@ -86,7 +104,7 @@ export function ligneDemande(r) {
 }
 
 /* kv `moteur/etat`, écrit par le worker à chaque battement (5 s) :
-   { at, worker, demarre, voies: { chaine|interactive: { occupee, demande } } }.
+   { at, worker, demarre, voies: { chaine|articles|fond|interactive: { occupee, demande } } }.
    Jamais de secret : identifiants de demande, types et horodatages seulement. */
 export const KV_MOTEUR_ETAT = "moteur/etat";
 export const MOTEUR_PERIME_MS = 30_000;
@@ -94,6 +112,21 @@ export const MOTEUR_PERIME_MS = 30_000;
 /* Clé de l'icône du site dans `settings` (data URL, hors SETTING_SPECS) :
    écrite par la console, servie par les deux côtés. */
 export const SITE_ICON_KEY = "site_icon";
+
+/* Clés kv que la console lit directement (R7, T24) : l'état de planification,
+   écrit par l'ordonnanceur du moteur, et le registre des dépenses LLM. */
+export const KV_PLANIFICATION = "schedule/state.json";
+export const KV_DEPENSES_LLM = "llm/spend.json";
+
+/* « 2026-10-12 » et « 2026-10 », à l'heure de Paris : les tranches du registre
+   des dépenses (KV_DEPENSES_LLM). fr-CA formate déjà en AAAA-MM-JJ, ce qui
+   évite de recomposer les parties à la main. Déplacé de src/llm/budget.js (R7). */
+const PARIS = new Intl.DateTimeFormat("fr-CA", { timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit" });
+
+export function periodKeys(now = Date.now()) {
+  const day = PARIS.format(new Date(now));
+  return { day, month: day.slice(0, 7) };
+}
 
 export function moteurVivant(etat, now = Date.now()) {
   const t = Date.parse(etat?.at ?? "");

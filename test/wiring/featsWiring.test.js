@@ -14,7 +14,10 @@ if (typeof mock.module !== "function") {
   const tickets = [];
   const notifications = [];
   let settings = {};
-  let published = 0;
+  /* T19c (R10) : la route publish dépose une demande « publish » au moteur et
+     répond 202, elle ne publie plus elle-même. */
+  const deposes = [];
+  const publiees = () => deposes.filter((d) => d.kind === "publish").length;
   let historyArgs = null;
 
   const noop = async () => null;
@@ -38,8 +41,11 @@ if (typeof mock.module !== "function") {
   mock.module(new URL("lib/db.js", root).href, {
     namedExports: { query: q, withTransaction: async (fn) => fn({ query: q }), closePool: async () => {}, getPool: () => ({}) },
   });
-  mock.module(new URL("publish/simulated.js", root).href, {
-    namedExports: { publish: async () => { published++; return { scheduledAt: null, publishedAt: new Date().toISOString(), url: "x" }; } },
+  mock.module(new URL("lib/demandes.js", root).href, {
+    namedExports: {
+      enqueue: async (kind, params) => { deposes.push({ kind, params }); return { id: deposes.length, kind, duplicate: false }; },
+      attendreJob: async () => ({ result: null, error: null }),
+    },
   });
 
   const A = await import(new URL("api/articles.js", root).href);
@@ -53,17 +59,17 @@ if (typeof mock.module !== "function") {
   const put = (id, illustration) => articles.set(id, { id, status: "a_revoir", provider: "openrouter", title: "t", chapo: "", body: [], zone: {}, seo: {}, illustration });
 
   test("M3-93 — par défaut, personne n'est obligé d'avoir une image", async () => {
-    settings = {}; published = 0;
+    settings = {}; deposes.length = 0;
     put("a", null);
     const r = await call(A.publish, { params: ["a"] });
-    assert.equal(r.status, 200); assert.equal(published, 1);
+    assert.equal(r.status, 202); assert.equal(publiees(), 1);
   });
 
   test("M3-93 — sous le seuil : parution et validation refusées sans URL d'image", async () => {
-    settings = { feat_sans_illustration_min_role: "super_utilisateur" }; published = 0;
+    settings = { feat_sans_illustration_min_role: "super_utilisateur" }; deposes.length = 0;
     put("b", { url: "", credit: "" });
     let r = await call(A.publish, { params: ["b"] });
-    assert.equal(r.status, 409); assert.equal(r.body.code, "illustration"); assert.equal(published, 0);
+    assert.equal(r.status, 409); assert.equal(r.body.code, "illustration"); assert.equal(publiees(), 0);
     for (const status of ["valide", "publie"]) {
       r = await call(A.setStatus, { params: ["b"], body: { status } });
       assert.equal(r.status, 409, status); assert.equal(r.body.code, "illustration", status);
@@ -73,13 +79,13 @@ if (typeof mock.module !== "function") {
   });
 
   test("M3-93 — au-dessus du seuil, ou avec une image : parution acceptée", async () => {
-    settings = { feat_sans_illustration_min_role: "super_utilisateur" }; published = 0;
+    settings = { feat_sans_illustration_min_role: "super_utilisateur" }; deposes.length = 0;
     put("c", null);
     let r = await call(A.publish, { params: ["c"], role: "super_utilisateur" });
-    assert.equal(r.status, 200);
+    assert.equal(r.status, 202);
     put("d", { url: "https://exemple.fr/i.jpg", credit: "©" });
     r = await call(A.publish, { params: ["d"] });
-    assert.equal(r.status, 200); assert.equal(published, 2);
+    assert.equal(r.status, 202); assert.equal(publiees(), 2);
   });
 
   test("M3-93 — « aucun » : même l'administrateur doit poser une image ; au-dessus du seuil, la validation passe", async () => {
