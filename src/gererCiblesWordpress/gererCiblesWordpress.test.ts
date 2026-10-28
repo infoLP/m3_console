@@ -14,7 +14,7 @@ const cible = (extra: Partial<CiblePublique> = {}): CiblePublique => ({
 });
 
 const etat = (extra: Partial<EtatPublication> = {}): EtatPublication => ({
-  targets: [cible()], mode: "wordpress", envConfigured: false, secretsAvailable: true, simulatedTarget: null, ...extra,
+  targets: [cible()], moteurVivant: true, mode: "wordpress", envConfigured: false, secretsAvailable: true, simulatedTarget: null, ...extra,
 });
 
 describe("adresseValide", () => {
@@ -63,6 +63,12 @@ describe("libellés", () => {
 });
 
 describe("avertissements", () => {
+  it("moteur arrêté : le dit, sans prétendre connaître le mode", () => {
+    const a = avertissements(etat({ moteurVivant: false, mode: null }));
+    assert.equal(a.length, 1);
+    assert.match(a[0], /Moteur arrêté/);
+    assert.doesNotMatch(a[0], /simulée|activée/);
+  });
   it("mode simulé : dit que rien ne part, même avec des cibles", () => {
     const a = avertissements(etat({ mode: "simulated" }));
     assert.equal(a.length, 1);

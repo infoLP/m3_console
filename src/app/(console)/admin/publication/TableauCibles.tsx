@@ -68,7 +68,7 @@ export function TableauCibles({ initial }: { initial: EtatPublication }) {
   return (
     <>
       <div className="bo-card"><h3>Publication WordPress
-        <span className="bo-note">{etat.mode === "wordpress" ? "mode réel" : "mode simulé"}</span></h3>
+        <span className="bo-note">{!etat.moteurVivant ? "moteur arrêté" : etat.mode === "wordpress" ? "mode réel" : "mode simulé"}</span></h3>
         <p className="bo-hint">
           Un article « envoyé en parution » part vers la <strong>cible par défaut</strong> ci-dessous, en brouillon ou
           en ligne selon son réglage. Le mode réel ou simulé est réglé par l&apos;exploitant (<code>M3_PUBLISH_MODE</code>),
