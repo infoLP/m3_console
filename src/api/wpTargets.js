@@ -8,8 +8,8 @@ import { can } from "../../shared/model.js";
 import { readSettings } from "../lib/yamlStore.js";
 import { secretsAvailable } from "../lib/secretBox.js";
 import { createWpTargets } from "../lib/wpTargets.js";
-import { checkWpTarget } from "../publish/wpCheck.js";
 import { readPublishMode, readWpConfig } from "../publish/wpConfig.js";
+import { enqueue, attendreJob, lireEtatMoteur } from "../lib/demandes.js";
 
 export const wpTargets = createWpTargets();
 
@@ -24,13 +24,16 @@ const trace = (event, t) => journal("action", event, {
 
 export async function targetsList({ res, role }) {
   if (reserve(role)) return refus(res);
-  const settings = await readSettings();
+  const [settings, etat] = await Promise.all([readSettings(), lireEtatMoteur().catch(() => ({ vivant: false }))]);
+  const vivant = !!etat.vivant;
   send(res, 200, {
     targets: await wpTargets.list(),
-    /* Interrupteur général : une variable d'environnement, jamais un réglage
-       d'écran. Tant qu'il vaut « simulated », aucune cible ne reçoit rien. */
-    mode: readPublishMode(settings, process.env),
-    envConfigured: readWpConfig(settings, process.env).configured,
+    /* Interrupteur général : une variable d'environnement DU MOTEUR, jamais un
+       réglage d'écran, lue dans moteur/etat (R8, T22c). Moteur arrêté : mode
+       inconnu (null) plutôt qu'un mode périmé. */
+    moteurVivant: vivant,
+    mode: vivant ? (etat.publication?.mode ?? null) : null,
+    envConfigured: vivant ? !!etat.publication?.envConfigured : false,
     secretsAvailable: secretsAvailable(),
     simulatedTarget: settings.wp_target || null,
   });
@@ -64,14 +67,15 @@ export async function targetRemove({ res, role, params }) {
   send(res, 200, { ok: true, ...r });
 }
 
-export async function targetTest({ res, role, params }) {
+/* « Tester la connexion » : demande test_wp_target au moteur (T22), qui déchiffre
+   le mot de passe, interroge le site et journalise ; la console attend ≤ 45 s
+   et ne voit que le verdict. */
+export async function targetTest({ res, role, params, user }) {
   if (reserve(role)) return refus(res);
-  const c = await wpTargets.credentials(params[0]);
-  const r = await checkWpTarget({ url: c.url, user: c.user, appPassword: c.appPassword });
-  journal("action", r.ok ? "Cible WordPress testée : connexion réussie" : "Cible WordPress testée : échec", {
-    level: r.ok ? "info" : "warn", target: c.name, detail: { message: r.message },
-  });
-  send(res, 200, r);
+  const job = await enqueue("test_wp_target", { targetId: String(params[0] ?? "") }, user);
+  const fin = await attendreJob(job.id);
+  if (fin.error) return send(res, /inconnue/.test(fin.error) ? 404 : 502, { error: fin.error });
+  send(res, 200, fin.result);
 }
 
 /* Où part un article qu'on publie : { mode, target }.

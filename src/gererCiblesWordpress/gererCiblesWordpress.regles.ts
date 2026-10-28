@@ -23,9 +23,11 @@ export interface CiblePublique {
 
 export interface EtatPublication {
   targets: CiblePublique[];
-  /* Interrupteur général, posé par l'environnement (M3_PUBLISH_MODE) : « simulated »
-     tant que personne ne l'a changé. */
-  mode: "simulated" | "wordpress";
+  /* Interrupteur général, posé par l'environnement du moteur (M3_PUBLISH_MODE) :
+     « simulated » tant que personne ne l'a changé ; null si le moteur est arrêté
+     (lu dans moteur/etat, jamais un mode périmé). */
+  moteurVivant: boolean;
+  mode: "simulated" | "wordpress" | null;
   envConfigured: boolean;
   secretsAvailable: boolean;
   simulatedTarget: string | null;
@@ -111,7 +113,9 @@ export function libelleGreffon(g: Greffon): string {
 export function avertissements(e: EtatPublication): string[] {
   const out: string[] = [];
   const actives = e.targets.filter((t) => t.active);
-  if (e.mode === "simulated") {
+  if (!e.moteurVivant) {
+    out.push("Moteur arrêté : le mode de publication (réel ou simulé) se lit sur le moteur et n'est pas connu tant qu'il ne tourne pas. Aucune parution ne part d'ici là.");
+  } else if (e.mode === "simulated") {
     out.push("La publication est simulée : aucun article ne part vers WordPress, quelles que soient les cibles ci-dessous. Pour l'activer, l'exploitant règle M3_PUBLISH_MODE=wordpress puis relance la pile.");
   } else if (!actives.length && !e.envConfigured) {
     out.push("La publication WordPress est activée (M3_PUBLISH_MODE=wordpress) mais aucune cible active n'existe : toute parution sera refusée.");
