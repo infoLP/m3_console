@@ -3,24 +3,22 @@
    superutilisateur) ; 403 pour tout autre rôle. La règle est dans
    src/lib/competitors.js.
    M3-122 : le scan (bouton « Lancer le scan », bandeau d'état) et les domaines
-   candidats qu'il trouve. Le moteur est celui de M3-121
-   (src/ingest/competitorScan.js) : runCompetitorScan, listCandidates,
-   setCandidateStatus, scanState. */
+   candidats qu'il trouve. Le scan tourne dans le moteur (demande
+   « competitor_scan », T23) ; la console lit l'état et décide des candidats en
+   SQL seul (src/lib/candidatsConcurrents.js, T23c) : demanderScan,
+   listCandidates, setCandidateStatus, scanState. */
 
 import { send } from "../lib/http.js";
 import { journal } from "../lib/journal.js";
-import { log } from "../lib/log.js";
 import { pushCollection } from "../lib/store.js";
 import { can } from "../../shared/model.js";
 import { createCompetitors } from "../lib/competitors.js";
-import * as competitorScan from "../ingest/competitorScan.js";
+import * as candidatsConcurrents from "../lib/candidatsConcurrents.js";
 
 export const competitors = createCompetitors();
 
 export const STATUTS_CANDIDAT = ["nouveau", "propose", "ajoute", "ecarte"];
 const LIMITE_CANDIDATS = 200;
-/* Le temps laissé au moteur pour dire « verrou pris » avant de répondre. */
-const ATTENTE_VERROU_MS = 50;
 
 const reserve = (role) => !can(role, "manage_competitors");
 const refus = (res) => send(res, 403, { error: "réservé à l'administrateur et au superutilisateur" });
@@ -50,9 +48,9 @@ export function demandeDepuisCandidat(c, user, maintenant = new Date()) {
   };
 }
 
-/* `service` : injectable pour les tests (dépôt en mémoire) ; `scan` : le moteur
-   de M3-121 ; `tickets` : où va la demande d'un « Proposer ». */
-export function handlers(service = competitors, { scan = competitorScan, tickets = { push: (t) => pushCollection("tickets", t) } } = {}) {
+/* `service` : injectable pour les tests (dépôt en mémoire) ; `scan` : l'état du
+   scan, les candidats et la demande au moteur ; `tickets` : où va la demande d'un « Proposer ». */
+export function handlers(service = competitors, { scan = candidatsConcurrents, tickets = { push: (t) => pushCollection("tickets", t) } } = {}) {
   return {
     async list({ res, role }) {
       if (reserve(role)) return refus(res);
@@ -94,24 +92,18 @@ export function handlers(service = competitors, { scan = competitorScan, tickets
       send(res, 200, { scan: await scan.scanState() });
     },
 
-    /* Non bloquant : la réponse part tout de suite, le scan tourne derrière. Un
-       scan déjà en cours → 409, qu'il se voie dans l'état ou au verrou : le
-       moteur rend aussitôt { skipped: "busy" } quand le verrou est pris, sinon
-       sa promesse ne se résout qu'en fin de scan, et on ne l'attend pas. */
+    /* Non bloquant : une demande au moteur (voie « fond »), réponse 202 avec la
+       demande. Un scan déjà en cours (bail « competitors » tenu) → 409 tout de
+       suite ; s'il démarre entre-temps, la demande sera close en échec « déjà
+       en cours » par le moteur. Une demande déjà en attente est rendue telle
+       quelle (déduplication par type, shared/contrat.js). */
     async launchScan({ res, role, user }) {
       if (reserve(role)) return refus(res);
       const etat = await scan.scanState();
       if (etat?.running) return send(res, 409, { error: DEJA_EN_COURS });
-      const lance = Promise.resolve().then(() => scan.runCompetitorScan({ trigger: "manuel", by: qui(user) }));
-      const tot = await Promise.race([
-        lance.then((r) => ({ r }), (e) => ({ e })),
-        new Promise((ok) => setTimeout(() => ok(null), ATTENTE_VERROU_MS)),
-      ]);
-      if (tot?.r?.skipped === "busy") return send(res, 409, { error: DEJA_EN_COURS });
-      if (tot?.e) return send(res, tot.e.status || 500, { error: tot.e.status ? tot.e.message : "le scan n'a pas pu démarrer" });
-      if (!tot) lance.catch((e) => log.error("concurrents", "scan manuel en échec", { error: e?.message }));
-      journal("action", "Scan des concurrents lancé", { target: "concurrents", detail: { declenchement: "manuel" } });
-      send(res, 202, { ok: true, started: true });
+      const job = await scan.demanderScan(user);
+      if (!job.duplicate) journal("action", "Scan des concurrents lancé", { target: "concurrents", detail: { declenchement: "manuel", demande: job.id } });
+      send(res, 202, { ok: true, started: true, job });
     },
 
     /* --------------------------------------- domaines candidats (M3-122) */

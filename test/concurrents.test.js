@@ -188,8 +188,9 @@ test("un superutilisateur n'ouvre aucune autre page /admin que Concurrents ; un 
 
 /* ------------------------------------------ scan et candidats (M3-122) */
 
-/* Le moteur de M3-121 (src/ingest/competitorScan.js), simulé au contrat. */
-function faux({ running = false, busy = false } = {}) {
+/* src/lib/candidatsConcurrents.js (T23c), simulé au contrat. `attente` : une
+   demande competitor_scan attend déjà (déduplication par type). */
+function faux({ running = false, attente = false } = {}) {
   const appels = [];
   let rows = [
     { id: 1, domain: "gironde.fr", status: "nouveau", occurrences: 4, competitors: [{ id: 1, label: "Sud Ouest" }], articles: [], lastSeenAt: "t" },
@@ -199,10 +200,9 @@ function faux({ running = false, busy = false } = {}) {
   return {
     appels, rows: () => rows,
     async scanState() { return { running, startedAt: null, last: null, enabled: false, next: null }; },
-    runCompetitorScan(o) {
-      appels.push(o);
-      /* Verrou pris : réponse immédiate ; sinon le scan « tourne » et ne se résout pas ici. */
-      return busy ? Promise.resolve({ skipped: "busy" }) : new Promise(() => {});
+    async demanderScan(user) {
+      appels.push({ par: user?.name ?? null });
+      return { id: 12, kind: "competitor_scan", duplicate: attente };
     },
     async listCandidates({ status, limit }) { return rows.filter((r) => r.status === status).slice(0, limit); },
     async setCandidateStatus(id, status, by) {
@@ -215,13 +215,14 @@ function faux({ running = false, busy = false } = {}) {
 }
 const avecScan = (scan, tickets = { push: async () => {} }) => handlers(createCompetitors({ repo: memRepo() }), { scan, tickets });
 
-test("« Lancer le scan » : runCompetitorScan manuel, réponse immédiate (202) pour l'admin et le SU ; 403 relecteur", async () => {
+test("« Lancer le scan » : demande competitor_scan au moteur, 202 avec la demande pour l'admin et le SU ; 403 relecteur", async () => {
   for (const role of ["administrateur", "super_utilisateur"]) {
     const scan = faux();
     const res = reponse();
     await avecScan(scan).launchScan({ res, role, user: { name: `Compte ${role}` } });
     assert.equal(res.status, 202, role);
-    assert.deepEqual(scan.appels, [{ trigger: "manuel", by: `Compte ${role}` }]);
+    assert.equal(res.body.job.id, 12);
+    assert.deepEqual(scan.appels, [{ par: `Compte ${role}` }]);
   }
   const scan = faux();
   for (const role of ["relecteur", undefined]) {
@@ -232,7 +233,7 @@ test("« Lancer le scan » : runCompetitorScan manuel, réponse immédiate (202)
   assert.equal(scan.appels.length, 0);
 });
 
-test("second lancement pendant un scan → 409, qu'il se voie dans l'état ou au verrou", async () => {
+test("second lancement pendant un scan → 409 sans demande ; demande déjà en attente → la même, 202", async () => {
   let scan = faux({ running: true });
   let res = reponse();
   await avecScan(scan).launchScan({ res, role: "administrateur" });
@@ -240,17 +241,20 @@ test("second lancement pendant un scan → 409, qu'il se voie dans l'état ou au
   assert.match(res.body.error, /déjà en cours/);
   assert.equal(scan.appels.length, 0);
 
-  scan = faux({ busy: true });
+  scan = faux({ attente: true });
   res = reponse();
   await avecScan(scan).launchScan({ res, role: "super_utilisateur" });
-  assert.equal(res.status, 409);
-  assert.match(res.body.error, /déjà en cours/);
+  assert.equal(res.status, 202);
+  assert.equal(res.body.job.duplicate, true);
 });
 
-test("en production, l'API appelle le moteur de M3-121 (src/ingest/competitorScan.js)", () => {
+test("en production, l'API passe par src/lib/candidatsConcurrents.js et n'importe plus le moteur", () => {
   const src = fs.readFileSync(path.join(racine, "src", "api", "concurrents.js"), "utf8");
-  assert.match(src, /import \* as competitorScan from "\.\.\/ingest\/competitorScan\.js"/);
-  assert.match(src, /scan = competitorScan/);
+  assert.match(src, /import \* as candidatsConcurrents from "\.\.\/lib\/candidatsConcurrents\.js"/);
+  assert.match(src, /scan = candidatsConcurrents/);
+  for (const m of src.matchAll(/from "([^"]+)"/g)) {
+    assert.doesNotMatch(m[1], /\/(ingest|generate|publish|llm|schedule|jobs|tools)\//, m[1]);
+  }
 });
 
 test("candidats filtrés par statut (nouveau par défaut) ; statut inconnu → 400 ; relecteur → 403", async () => {
