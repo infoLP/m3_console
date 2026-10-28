@@ -7,7 +7,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { createWpTargets, hintOfAppPassword, normalizeUrl, toPublic, validateTarget } from "../src/lib/wpTargets.js";
-import { targetForPublish, targetsList, targetCreate, targetUpdate, targetActivate, targetRemove, targetTest } from "../src/api/wpTargets.js";
+import { targetsList, targetCreate, targetUpdate, targetActivate, targetRemove, targetTest } from "../src/api/wpTargets.js";
 
 /* ------------------------------------------------------------ doublures */
 
@@ -230,29 +230,7 @@ test("resolveForPublish : un mot de passe devenu illisible est dit, pas ignoré 
   await assert.rejects(svc.resolveForPublish(), (e) => e.status === 503 && /illisible/.test(e.message));
 });
 
-/* ------------------------------------------------- l'API : aiguillage et droits */
-
-test("targetForPublish : en mode simulé (défaut), aucune cible n'est même consultée", async () => {
-  let consulte = false;
-  const targets = { resolveForPublish: async () => { consulte = true; return null; } };
-  const r = await targetForPublish({}, null, { env: {}, targets });
-  assert.deepEqual(r, { mode: "simulated", target: null });
-  assert.equal(consulte, false);
-});
-
-test("targetForPublish : mode wordpress → la cible résolue ; sinon l'environnement complet ; sinon 409", async () => {
-  const cible = { id: 1, name: "Site", url: "https://s.test", user: "c", appPassword: "x", publishStatus: "draft" };
-  const env = { M3_PUBLISH_MODE: "wordpress" };
-  assert.deepEqual(await targetForPublish({}, 5, { env, targets: { resolveForPublish: async (id) => (id === 5 ? cible : null) } }), { mode: "wordpress", target: cible });
-
-  const complet = { ...env, M3_WP_URL: "https://env.test", M3_WP_USER: "u", M3_WP_APP_PASSWORD: "p" };
-  assert.deepEqual(await targetForPublish({}, null, { env: complet, targets: { resolveForPublish: async () => null } }), { mode: "wordpress", target: null });
-
-  await assert.rejects(
-    targetForPublish({}, null, { env, targets: { resolveForPublish: async () => null } }),
-    (e) => e.status === 409 && /aucune cible active/.test(e.message)
-  );
-});
+/* ------------------------------------------------- l'API : droits */
 
 test("l'onglet Publication est réservé à l'administrateur : refus 403 avant toute lecture", async () => {
   const handlers = { targetsList, targetCreate, targetUpdate, targetActivate, targetRemove, targetTest };

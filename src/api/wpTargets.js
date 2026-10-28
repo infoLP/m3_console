@@ -1,6 +1,7 @@
 /* Cibles de publication WordPress (M3-53) : le service de production, et les
    handlers de l'onglet Publication du back-office, réservé à l'administrateur.
-   La règle est dans src/lib/wpTargets.js, le transport dans src/publish/. */
+   La règle est dans src/lib/wpTargets.js ; le transport, le choix de la cible
+   d'une parution et le test de connexion sont dans le moteur (T19, T22). */
 
 import { send } from "../lib/http.js";
 import { journal } from "../lib/journal.js";
@@ -8,7 +9,6 @@ import { can } from "../../shared/model.js";
 import { readSettings } from "../lib/yamlStore.js";
 import { secretsAvailable } from "../lib/secretBox.js";
 import { createWpTargets } from "../lib/wpTargets.js";
-import { readPublishMode, readWpConfig } from "../publish/wpConfig.js";
 import { enqueue, attendreJob, lireEtatMoteur } from "../lib/demandes.js";
 
 export const wpTargets = createWpTargets();
@@ -76,20 +76,4 @@ export async function targetTest({ res, role, params, user }) {
   const fin = await attendreJob(job.id);
   if (fin.error) return send(res, /inconnue/.test(fin.error) ? 404 : 502, { error: fin.error });
   send(res, 200, fin.result);
-}
-
-/* Où part un article qu'on publie : { mode, target }.
-   - mode « simulated » (défaut) : nulle part, le journal des publications seulement ;
-   - mode « wordpress » : la cible demandée, sinon la cible par défaut (ou l'unique
-     cible active) ; à défaut, la configuration d'environnement M3_WP_* si elle est
-     complète ; sinon une erreur 409 qui dit quoi faire — jamais un envoi dans le vide. */
-export async function targetForPublish(settings, targetId = null, { env = process.env, targets = wpTargets } = {}) {
-  if (readPublishMode(settings, env) !== "wordpress") return { mode: "simulated", target: null };
-  const target = await targets.resolveForPublish(targetId);
-  if (target) return { mode: "wordpress", target };
-  if (readWpConfig(settings, env).configured) return { mode: "wordpress", target: null };
-  throw Object.assign(
-    new Error("La publication WordPress est activée (M3_PUBLISH_MODE=wordpress), mais aucune cible active n'est enregistrée : en créer une dans l'onglet Publication."),
-    { status: 409 }
-  );
 }
