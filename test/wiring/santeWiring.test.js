@@ -1,28 +1,32 @@
 /* M3-108 — /api/health par niveau de détail : contrat du HEALTHCHECK (200/503
    et `ok`), rien d'autre que { ok, etat, ref, at } sans session, mesures pour
    un connecté, configuration en oui/non pour l'administrateur et jamais une
-   valeur de variable d'environnement. Vrai gestionnaire, vrai dossier
-   migrations/ ; base et journal simulés par `mock.module` : `npm test` saute
-   ce fichier, `npm run test:wiring` le lance. */
+   valeur de variable d'environnement. Schéma à la M2 (T25) : la console ne lit
+   plus de dossier migrations/, elle compare le schéma à sa liste ATTENDUS et
+   répond 503 avec les migrations du moteur à jouer. Vrai gestionnaire ; base
+   et journal simulés par `mock.module` : `npm test` saute ce fichier,
+   `npm run test:wiring` le lance. */
 
 import test, { mock } from "node:test";
 import assert from "node:assert/strict";
-import { readdir } from "node:fs/promises";
 
 if (typeof mock.module !== "function") {
   test("santé du service", { skip: "lancer `npm run test:wiring` (option --experimental-test-module-mocks)" }, () => {});
 } else {
   const root = new URL("../../src/", import.meta.url);
-  const fichiers = (await readdir(new URL("../../migrations/", import.meta.url))).filter((f) => f.endsWith(".sql") || f.endsWith(".mjs")).sort();
-  const TOUTES = ["articles", "kv_documents", "settings", "users", "sessions", "journal", "jobs"];
+  const { ATTENDUS, MIGRATION_MINIMALE } = await import(new URL("diagnostiquerService/sante.regles.js", root).href);
 
+  /* `absents` : éléments attendus que le schéma n'a pas ; `derniere` : la
+     dernière ligne de schema_migrations (null : table vide ou absente). */
   let base = {};
-  const reset = (s = {}) => { base = { enPanne: false, appliquees: [...fichiers], tables: [...TOUTES], ...s }; erreurs.length = 0; };
+  const reset = (s = {}) => { base = { enPanne: false, absents: [], derniere: MIGRATION_MINIMALE, ...s }; erreurs.length = 0; };
   const q = async (sql) => {
     if (base.enPanne) throw new Error("connect ECONNREFUSED postgresql://m3:FuiteMotDePasse@db:5432/m3");
+    /* Avant « SELECT 1 » : la requête du schéma en contient un (NOT EXISTS). */
+    if (/unnest/.test(sql)) return { rows: base.absents.map((nom) => ({ nom })) };
     if (/SELECT 1/.test(sql)) return { rows: [{ "?column?": 1 }] };
-    if (/FROM schema_migrations/.test(sql)) return { rows: base.appliquees.map((version) => ({ version })) };
-    if (/information_schema\.tables/.test(sql)) return { rows: base.tables.map((table_name) => ({ table_name })) };
+    if (/to_regclass\('schema_migrations'\)/.test(sql)) return { rows: [{ t: base.derniere === null ? null : "schema_migrations" }] };
+    if (/FROM schema_migrations/.test(sql)) return { rows: [{ v: base.derniere }] };
     if (/FROM jobs/.test(sql)) return { rows: [{ attente: null, traite: new Date() }] };
     return { rows: [] };
   };
@@ -80,14 +84,14 @@ if (typeof mock.module !== "function") {
     assert.equal(r.json.config, undefined);
   });
 
-  test("connecté : base, migrations et tables, pas de configuration", async () => {
+  test("connecté : base, migrations et schéma, pas de configuration", async () => {
     reset();
     const r = await appel(connecte);
     assert.equal(r.statut, 200);
     assert.equal(r.json.base.ok, true);
     assert.equal(typeof r.json.base.latenceMs, "number");
-    assert.deepEqual(r.json.migrations, { appliquees: fichiers.length, attendues: fichiers.length, manquantes: [] });
-    assert.deepEqual(r.json.tables.map((t) => t.nom), TOUTES);
+    assert.deepEqual(r.json.migrations, { minimale: MIGRATION_MINIMALE, derniere: MIGRATION_MINIMALE, aJouer: [] });
+    assert.deepEqual(r.json.tables.map((t) => t.nom), ATTENDUS.map((a) => a.nom));
     assert.ok(r.json.tables.every((t) => t.ok));
     assert.equal("config" in r.json, false);
   });
@@ -134,24 +138,36 @@ if (typeof mock.module !== "function") {
     }
   });
 
-  test("migration manquante : dégradé mais 200 (la base répond), la migration est nommée", async () => {
-    const derniere = fichiers.at(-1);
-    reset({ appliquees: fichiers.slice(0, -1) });
+  test("moteur en retard : 503, dégradé, la migration minimale est à jouer", async () => {
+    reset({ derniere: "021_competitor_candidates.sql" });
     const r = await appel(connecte);
-    assert.equal(r.statut, 200);
-    assert.equal(r.json.ok, true);
+    assert.equal(r.statut, 503);
+    assert.equal(r.json.ok, false);
     assert.equal(r.json.etat, "degrade");
-    assert.deepEqual(r.json.migrations.manquantes, [derniere]);
+    assert.deepEqual(r.json.migrations.aJouer, [MIGRATION_MINIMALE]);
     assert.equal(erreurs.length, 1);
     assert.equal(erreurs[0].champs.ref, r.json.ref);
-    assert.equal(erreurs[0].champs.migrationsManquantes, derniere);
+    assert.equal(erreurs[0].champs.migrationsAJouer, MIGRATION_MINIMALE);
   });
 
-  test("table absente : dégradé, 200", async () => {
-    reset({ tables: TOUTES.filter((t) => t !== "jobs") });
+  test("élément absent : 503, l'élément et sa migration sont nommés", async () => {
+    reset({ absents: ["jobs.dedup_key", "ip_bans"] });
     const r = await appel(connecte);
-    assert.equal(r.statut, 200);
+    assert.equal(r.statut, 503);
     assert.equal(r.json.etat, "degrade");
-    assert.deepEqual(r.json.tables.filter((t) => !t.ok).map((t) => t.nom), ["jobs"]);
+    assert.deepEqual(r.json.tables.filter((t) => !t.ok).map((t) => t.nom).sort(), ["ip_bans", "jobs.dedup_key"]);
+    assert.deepEqual(r.json.migrations.aJouer, ["016_ip_bans.sql", "023_jobs_voies.sql"]);
+  });
+
+  test("base neuve (moteur jamais démarré) : 503, tout est à jouer ; sans session, rien de plus que l'état", async () => {
+    reset({ absents: ATTENDUS.map((a) => a.nom), derniere: null });
+    const r = await appel(connecte);
+    assert.equal(r.statut, 503);
+    assert.equal(r.json.migrations.derniere, null);
+    assert.equal(r.json.migrations.aJouer[0], "001_init.sql");
+    assert.equal(r.json.migrations.aJouer.at(-1), MIGRATION_MINIMALE);
+    const anonyme = await appel();
+    assert.equal(anonyme.statut, 503);
+    assert.deepEqual(Object.keys(anonyme.json).sort(), ["at", "etat", "ok", "ref"]);
   });
 }

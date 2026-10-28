@@ -17,7 +17,7 @@ type ReponseSante = {
   ref: string;
   at: string;
   base?: { ok: boolean; latenceMs: number | null };
-  migrations?: { appliquees: number; attendues: number; manquantes: string[] } | null;
+  migrations?: { minimale: string; derniere: string | null; aJouer: string[] } | null;
   tables?: { nom: string; ok: boolean }[] | null;
   config?: { baseConfiguree: boolean; planificateurCoupe: boolean; connexionMotDePasse: string; worker: string } | null;
 };

@@ -34,6 +34,12 @@ COPY --from=build --chown=node:node /app/public ./public
 COPY --chown=node:node config ./config
 COPY --chown=node:node migrations ./migrations
 COPY --chown=node:node src/generate/communes.fr.json ./src/generate/communes.fr.json
+# Outils d'exploitation (T25c, R12) : créer le premier administrateur, lever un
+# bannissement, par « docker exec <conteneur> node outils-console/userAdmin.js … ».
+# Ils n'importent que src/lib (db, log, redact, racine, auth, main, ipBan,
+# clientIp) et pg, déjà présent dans node_modules du standalone.
+COPY --chown=node:node outils-console ./outils-console
+COPY --chown=node:node src/lib ./src/lib
 # Journal (src/lib/log.js) : /app appartient à root, logs/ doit être à node.
 RUN mkdir -p /app/logs && chown node:node /app/logs
 USER node

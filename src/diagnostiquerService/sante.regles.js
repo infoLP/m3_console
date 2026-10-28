@@ -5,10 +5,55 @@
    d'où l'absence de toute dépendance Node. Tout ce qui se décide ici se teste
    sans base (diagnostiquerService.test.ts). */
 
-/* Les tables sans lesquelles l'application ne tient pas debout. Une table
-   absente alors que les migrations sont toutes passées signale une base
-   restaurée à moitié : c'est précisément ce qu'on veut voir. */
-export const TABLES_ATTENDUES = ["articles", "kv_documents", "settings", "users", "sessions", "journal", "jobs"];
+/* Schéma attendu, à la M2 (M2_Console/src/etat.ts) : les migrations vivent
+   dans le moteur, qui les joue à son démarrage ; la console n'a plus de dossier
+   migrations/ à lire (T25). Elle dit seulement ce dont ELLE a besoin, table ou
+   « table.colonne », et quelle migration du moteur le crée : un élément absent
+   se traduit en « migration à jouer », que l'exploitant lit dans /api/health.
+
+   Les migrations sans trace dans le schéma (données : 007, 018 ; contraintes)
+   sont couvertes par MIGRATION_MINIMALE : la plus récente que cette console
+   suppose jouée. À relever quand la console se met à dépendre d'une migration
+   plus récente du moteur. */
+export const MIGRATION_MINIMALE = "023_jobs_voies.sql";
+
+export const ATTENDUS = [
+  ...["kv_documents", "sources", "settings", "users", "config_history", "articles"].map((nom) => ({ nom, migration: "001_init.sql" })),
+  { nom: "sessions", migration: "002_auth.sql" },
+  { nom: "users.password_hash", migration: "002_auth.sql" },
+  { nom: "articles.decided_at", migration: "003_decision_trace.sql" },
+  { nom: "llm_providers", migration: "006_llm_providers.sql" },
+  { nom: "auth_requests", migration: "008_entra.sql" },
+  { nom: "users.entra_oid", migration: "008_entra.sql" },
+  { nom: "sources.organisation", migration: "009_source_organisation.sql" },
+  { nom: "sources.interval_days", migration: "010_source_interval.sql" },
+  { nom: "sources.scope_level", migration: "011_source_zone.sql" },
+  { nom: "journal", migration: "013_journal.sql" },
+  { nom: "jobs", migration: "014_jobs.sql" },
+  { nom: "llm_providers.model_tests", migration: "015_model_tests.sql" },
+  ...["ip_failures", "ip_bans"].map((nom) => ({ nom, migration: "016_ip_bans.sql" })),
+  { nom: "llm_prompts", migration: "017_llm_prompts.sql" },
+  { nom: "wp_targets", migration: "019_wp_targets.sql" },
+  { nom: "competitors", migration: "020_competitors.sql" },
+  { nom: "competitor_candidates", migration: "021_competitor_candidates.sql" },
+  { nom: "competitors.last_scan_at", migration: "021_competitor_candidates.sql" },
+  { nom: "article_tombstones", migration: "022_article_tombstones.sql" },
+  { nom: "articles.item_key", migration: "022_article_tombstones.sql" },
+  { nom: "jobs.dedup_key", migration: "023_jobs_voies.sql" },
+];
+
+const numero = (migration) => Number.parseInt(String(migration ?? ""), 10);
+
+/* Les migrations à jouer, sans doublon et dans l'ordre : celles des éléments
+   absents, et la minimale si la dernière inscrite dans schema_migrations est
+   plus ancienne (ou si rien n'y est inscrit : null). `derniere` vaut
+   undefined quand on n'a pas pu la lire : on ne réclame alors que ce que le
+   schéma montre. */
+export function migrationsAJouer(manquants, derniere) {
+  const a = new Set(ATTENDUS.filter((x) => manquants.includes(x.nom)).map((x) => x.migration));
+  if (derniere !== undefined && !(numero(derniere) >= numero(MIGRATION_MINIMALE))) a.add(MIGRATION_MINIMALE);
+  return [...a].sort();
+}
 
 export const INTERVALLE_SONDE_MS = 5_000;
 
@@ -41,12 +86,13 @@ export function fabriquerRef(date = new Date(), alea = Math.random) {
 
 export const FORME_REF = /^S-\d{8}-\d{6}-[A-HJKMNP-Z2-9]{4}$/;
 
-/* Dégradé dès que la base ne répond pas, qu'une migration manque ou qu'une
-   table attendue est absente. Une mesure qu'on n'a pas pu faire (null) compte
-   comme un manque : on ne déclare pas sain ce qu'on n'a pas vérifié. */
+/* Dégradé dès que la base ne répond pas, qu'une migration est à jouer ou qu'un
+   élément attendu du schéma est absent. Une mesure qu'on n'a pas pu faire
+   (null) compte comme un manque : on ne déclare pas sain ce qu'on n'a pas
+   vérifié. */
 export function calculerEtat({ base, migrations, tables } = {}) {
   if (!base?.ok) return "degrade";
-  if (!migrations || migrations.manquantes.length > 0) return "degrade";
+  if (!migrations || migrations.aJouer.length > 0) return "degrade";
   if (!Array.isArray(tables) || tables.some((t) => !t.ok)) return "degrade";
   return "ok";
 }
@@ -126,13 +172,15 @@ export function lignesDetail(reponse) {
   l.push(b.ok ? `Base : joignable (${b.latenceMs ?? "?"} ms)` : "Base : injoignable");
   const m = reponse.migrations;
   if (m) {
-    l.push(`Migrations : ${m.appliquees}/${m.attendues} appliquées` + (m.manquantes.length ? ` — manquantes : ${m.manquantes.join(", ")}` : ""));
+    l.push(m.aJouer.length
+      ? `Migrations du moteur à jouer : ${m.aJouer.join(", ")}`
+      : `Migrations : à jour (dernière ${m.derniere ?? "?"}, minimale ${m.minimale})`);
   } else if (b.ok) l.push("Migrations : non vérifiées");
   const t = reponse.tables;
   if (Array.isArray(t)) {
     const absentes = t.filter((x) => !x.ok).map((x) => x.nom);
-    l.push(absentes.length ? `Tables absentes : ${absentes.join(", ")}` : `Tables : les ${t.length} attendues sont présentes`);
-  } else if (b.ok) l.push("Tables : non vérifiées");
+    l.push(absentes.length ? `Schéma, éléments absents : ${absentes.join(", ")}` : `Schéma : les ${t.length} éléments attendus sont présents`);
+  } else if (b.ok) l.push("Schéma : non vérifié");
   const c = reponse.config;
   if (c) {
     l.push(`Base configurée : ${ouiNon(c.baseConfiguree)}`);

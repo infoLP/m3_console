@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
-  ATTENTE_WORKER_MS, FORME_REF, SONDE_INITIALE, TABLES_ATTENDUES,
-  apresSonde, calculerEtat, etatWorker, fabriquerRef, filtrerParNiveau, lignesDetail, messageSonde, niveauDe,
+  ATTENDUS, ATTENTE_WORKER_MS, FORME_REF, MIGRATION_MINIMALE, SONDE_INITIALE,
+  apresSonde, calculerEtat, migrationsAJouer, etatWorker, fabriquerRef, filtrerParNiveau, lignesDetail, messageSonde, niveauDe,
 } from "./sante.regles.js";
 
-const tablesOk = () => TABLES_ATTENDUES.map((nom) => ({ nom, ok: true }));
-const sain = () => ({ base: { ok: true, latenceMs: 3 }, migrations: { appliquees: 2, attendues: 2, manquantes: [] }, tables: tablesOk() });
+const tablesOk = () => ATTENDUS.map((a) => ({ nom: a.nom, ok: true }));
+const sain = () => ({ base: { ok: true, latenceMs: 3 }, migrations: { minimale: MIGRATION_MINIMALE, derniere: MIGRATION_MINIMALE, aJouer: [] }, tables: tablesOk() });
 const rapport = () => ({
   ok: true, etat: "ok", ref: "S-20261015-143205-K7QM", at: "2026-10-15T14:32:05.000Z", ...sain(),
   config: { baseConfiguree: true, planificateurCoupe: false, connexionMotDePasse: "oui", worker: "actif" },
@@ -27,11 +27,35 @@ describe("santé du service (M3-108)", () => {
     for (const r of refs) assert.match(r, FORME_REF);
   });
 
-  it("état : ok seulement si base, migrations et tables sont bonnes", () => {
+  it("état : ok seulement si base, migrations et schéma sont bons", () => {
     assert.equal(calculerEtat(sain()), "ok");
     assert.equal(calculerEtat({ ...sain(), base: { ok: false, latenceMs: null } }), "degrade");
-    assert.equal(calculerEtat({ ...sain(), migrations: { appliquees: 1, attendues: 2, manquantes: ["002_x.sql"] } }), "degrade");
+    assert.equal(calculerEtat({ ...sain(), migrations: { ...sain().migrations, aJouer: ["023_jobs_voies.sql"] } }), "degrade");
     assert.equal(calculerEtat({ ...sain(), tables: [...tablesOk().slice(1), { nom: "articles", ok: false }] }), "degrade");
+  });
+
+  it("schéma à la M2 : chaque élément attendu nomme une migration du moteur, sans doublon", () => {
+    const noms = ATTENDUS.map((a) => a.nom);
+    assert.equal(new Set(noms).size, noms.length);
+    for (const a of ATTENDUS) assert.match(a.migration, /^\d{3}_[a-z0-9_]+\.(sql|mjs)$/, a.nom);
+    /* La minimale couvre toutes celles que la liste nomme : sinon une console
+       à jour de schéma réclamerait quand même une migration. */
+    for (const a of ATTENDUS) assert.ok(a.migration <= MIGRATION_MINIMALE, a.migration);
+    for (const a of ATTENDUS.filter((x) => x.nom.includes("."))) {
+      assert.ok(ATTENDUS.some((t) => t.nom === a.nom.split(".")[0]), `table de ${a.nom} attendue`);
+    }
+  });
+
+  it("migrations à jouer : celles des éléments absents, triées, et la minimale si la base est en retard", () => {
+    assert.deepEqual(migrationsAJouer([], MIGRATION_MINIMALE), []);
+    assert.deepEqual(migrationsAJouer([], "024_plus_recente.sql"), []);
+    assert.deepEqual(migrationsAJouer(["jobs.dedup_key", "ip_bans", "ip_failures"], "015_model_tests.sql"),
+      ["016_ip_bans.sql", "023_jobs_voies.sql"]);
+    assert.deepEqual(migrationsAJouer([], "021_competitor_candidates.sql"), [MIGRATION_MINIMALE]);
+    /* Base neuve : rien d'inscrit, tout est à jouer. */
+    assert.equal(migrationsAJouer(ATTENDUS.map((a) => a.nom), null)[0], "001_init.sql");
+    /* Dernière migration illisible : on ne réclame que ce que le schéma montre. */
+    assert.deepEqual(migrationsAJouer([], undefined), []);
   });
 
   it("état : une mesure non faite (null) compte comme un manque", () => {
@@ -111,14 +135,14 @@ describe("sonde des pages d'erreur (M3-108)", () => {
     assert.deepEqual(lignesDetail(null), []);
     const l = lignesDetail({
       base: { ok: true, latenceMs: 4 },
-      migrations: { appliquees: 16, attendues: 17, manquantes: ["017_llm_prompts.sql"] },
+      migrations: { minimale: "023_jobs_voies.sql", derniere: "016_ip_bans.sql", aJouer: ["017_llm_prompts.sql", "023_jobs_voies.sql"] },
       tables: [{ nom: "articles", ok: true }, { nom: "jobs", ok: false }],
       config: { baseConfiguree: true, planificateurCoupe: false, connexionMotDePasse: "oui", worker: "en attente" },
     });
     assert.deepEqual(l, [
       "Base : joignable (4 ms)",
-      "Migrations : 16/17 appliquées — manquantes : 017_llm_prompts.sql",
-      "Tables absentes : jobs",
+      "Migrations du moteur à jouer : 017_llm_prompts.sql, 023_jobs_voies.sql",
+      "Schéma, éléments absents : jobs",
       "Base configurée : oui",
       "Planificateur coupé : non",
       "Connexion par mot de passe : oui",

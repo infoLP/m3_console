@@ -1,8 +1,10 @@
 /* /api/health (M3-108, axe T2) — santé du service, par niveau de détail.
 
    Deux lecteurs. Le HEALTHCHECK du conteneur, sans session : il ne regarde que
-   le statut (200 si la base répond, 503 sinon) et le booléen `ok` — ce contrat
-   date de auth.health et ne doit pas bouger. Et la page d'erreur, qui sonde ici
+   le statut et le booléen `ok`. Depuis la séparation console/moteur (T25, à la
+   M2), 200 veut dire « base joignable ET schéma au niveau » : une console
+   déployée avant que le moteur ait joué ses migrations répond 503, et la liste
+   des migrations à jouer est dans le rapport (connecté). Et la page d'erreur, qui sonde ici
    pour dire si le service est en cause et donner une référence à transmettre.
 
    Sans session, la réponse se borne à { ok, etat, ref, at } : l'état d'une base
@@ -14,20 +16,38 @@
    « dégradé » doit être le même pour tous, et c'est lui qui écrit la ligne de
    journal que la référence permet de retrouver. */
 
-import { readdir } from "node:fs/promises";
-import { join } from "node:path";
 import { query } from "../lib/db.js";
 import { log } from "../lib/log.js";
 import { send } from "../lib/http.js";
-import { ROOT } from "../lib/racine.js";
 import { authMode, localEnabled } from "../lib/oidc.js";
-import { TABLES_ATTENDUES, calculerEtat, etatWorker, fabriquerRef, filtrerParNiveau, niveauDe } from "./sante.regles.js";
+import { ATTENDUS, MIGRATION_MINIMALE, migrationsAJouer, calculerEtat, etatWorker, fabriquerRef, filtrerParNiveau, niveauDe } from "./sante.regles.js";
 
-/* Même filtre que src/tools/migrate.js : la 007 est un .mjs, et elle est
-   inscrite dans schema_migrations comme les .sql. Ne compter que les .sql la
-   ferait passer pour une migration inconnue. */
-async function migrationsAttendues() {
-  return (await readdir(join(ROOT, "migrations"))).filter((f) => f.endsWith(".sql") || f.endsWith(".mjs")).sort();
+/* Les éléments attendus absents du schéma courant : une table par to_regclass,
+   une colonne par information_schema (seulement si sa table existe, sinon
+   c'est la table qui manque). Même requête que M2_Console/src/etat.ts. */
+async function elementsAbsents() {
+  const tables = ATTENDUS.filter((a) => !a.nom.includes(".")).map((a) => a.nom);
+  const colonnes = ATTENDUS.filter((a) => a.nom.includes(".")).map((a) => a.nom);
+  const { rows } = await query(
+    `SELECT nom FROM unnest($1::text[]) AS nom WHERE to_regclass(nom) IS NULL
+     UNION ALL
+     SELECT c.nom FROM unnest($2::text[]) AS c(nom)
+      WHERE to_regclass(split_part(c.nom, '.', 1)) IS NOT NULL AND NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+         WHERE table_schema = current_schema()
+           AND table_name = split_part(c.nom, '.', 1) AND column_name = split_part(c.nom, '.', 2))`,
+    [tables, colonnes]
+  );
+  return rows.map((r) => r.nom);
+}
+
+/* La dernière migration inscrite par le moteur : null si aucune (ou table
+   absente, base neuve), undefined si la lecture a échoué autrement. Les noms
+   commencent par leur numéro sur trois chiffres : l'ordre texte est le bon. */
+async function derniereMigration() {
+  if ((await query("SELECT to_regclass('schema_migrations') AS t")).rows[0]?.t == null) return null;
+  const { rows } = await query("SELECT max(version) AS v FROM schema_migrations");
+  return rows[0]?.v ?? null;
 }
 
 /* Chaque mesure est isolée : une table de suivi illisible ne doit pas masquer
@@ -44,21 +64,16 @@ async function mesurer() {
   }
   const base = { ok: true, latenceMs: Math.round(performance.now() - depart) };
 
+  /* Le schéma d'abord : c'est lui qui dit quelles migrations jouer. Si on ne
+     peut pas le lire, ni les tables ni les migrations ne sont vérifiées. */
+  let tables = null;
   let migrations = null;
   try {
-    const [{ rows }, attendues] = await Promise.all([query("SELECT version FROM schema_migrations"), migrationsAttendues()]);
-    const faites = new Set(rows.map((r) => r.version));
-    migrations = { appliquees: attendues.filter((f) => faites.has(f)).length, attendues: attendues.length, manquantes: attendues.filter((f) => !faites.has(f)) };
-  } catch (e) { erreurs.migrations = e?.message || String(e); }
-
-  let tables = null;
-  try {
-    const { rows } = await query(
-      "SELECT table_name FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = ANY($1)",
-      [TABLES_ATTENDUES]
-    );
-    const presentes = new Set(rows.map((r) => r.table_name));
-    tables = TABLES_ATTENDUES.map((nom) => ({ nom, ok: presentes.has(nom) }));
+    const absents = await elementsAbsents();
+    tables = ATTENDUS.map((a) => ({ nom: a.nom, ok: !absents.includes(a.nom) }));
+    let derniere;
+    try { derniere = await derniereMigration(); } catch (e) { erreurs.migrations = e?.message || String(e); }
+    migrations = { minimale: MIGRATION_MINIMALE, derniere: derniere ?? null, aJouer: migrationsAJouer(absents, derniere) };
   } catch (e) { erreurs.tables = e?.message || String(e); }
 
   let worker = "inconnu";
@@ -89,7 +104,7 @@ export async function sante({ res, user, role }) {
     m = { base: { ok: false, latenceMs: null }, migrations: null, tables: null, worker: "inconnu", erreurs: { mesure: e?.message || String(e) } };
   }
   const etat = calculerEtat(m);
-  const ok = m.base.ok;
+  const ok = etat === "ok";
 
   if (etat === "degrade") {
     /* La référence copiée par l'utilisateur mène à cette ligne : tout le détail
@@ -98,8 +113,8 @@ export async function sante({ res, user, role }) {
       ref,
       base: m.base.ok ? "ok" : "injoignable",
       latenceMs: m.base.latenceMs,
-      migrations: m.migrations ? `${m.migrations.appliquees}/${m.migrations.attendues}` : "non vérifiées",
-      migrationsManquantes: m.migrations?.manquantes.join(",") || undefined,
+      migrations: m.migrations ? `dernière ${m.migrations.derniere ?? "aucune"}, minimale ${m.migrations.minimale}` : "non vérifiées",
+      migrationsAJouer: m.migrations?.aJouer.join(",") || undefined,
       tablesAbsentes: m.tables ? m.tables.filter((t) => !t.ok).map((t) => t.nom).join(",") || undefined : "non vérifiées",
       worker: m.worker,
       ...Object.fromEntries(Object.entries(m.erreurs || {}).map(([k, v]) => [`erreur_${k}`, v])),
