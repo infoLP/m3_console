@@ -2,8 +2,7 @@ import { send } from "../lib/http.js";
 import { readCollection, writeCollection, pushCollection, filterCollection } from "../lib/store.js";
 import { readUsers, writeUsers, readSettings, readSettingsState, writeSettings, resetSettings as resetSettingsStore, SETTING_SPECS } from "../lib/yamlStore.js";
 import { listProviders } from "../lib/llmProviders.js";
-import { planRelance } from "../generate/relance.js";
-import { estRouteur } from "../../shared/moteurs.js";
+import { estRouteur, planRelance } from "../../shared/moteurs.js";
 import { DEFAULT_SETTINGS, PROMPT_DEFAULTS } from "../../shared/model.js";
 import { PERMISSIONS, ROLES, can, roleAtLeast } from "../../shared/model.js";
 import { featsFor, notificationVisible } from "../../shared/feats.js";
@@ -12,7 +11,7 @@ import { SOURCE_TYPES } from "../../shared/sources.js";
 import { REGIONS, DEPARTEMENTS } from "../../shared/geoFrance.js";
 import { journal, readJournal } from "../lib/journal.js";
 import { readSiteIcon, writeSiteIcon, deleteSiteIcon } from "../lib/siteIcon.js";
-import { refreshProvider, providerLabel, providerModel } from "../llm/index.js";
+import { lireEtatMoteur } from "../lib/demandes.js";
 
 /* Réglages envoyés à la console (/api/me → moi.scoring) : ceux de la grille
    (DEFAULT_SETTINGS, dont slug_max_words et breve_signs_min) et du prompt
@@ -34,6 +33,9 @@ export async function me({ res, role, user }) {
   const lastGen = runs.find((x) => x.kind === "generation");
   const settings = await readSettings();
   const scoring = scoringDe(settings);
+  /* Moteur LLM effectif (T20c) : écrit par le worker dans moteur/etat, sans la
+     clé. Worker arrêté ou état absent : « inconnu » plutôt qu'un mock supposé. */
+  const llm = (await lireEtatMoteur().catch(() => ({}))).llm || null;
   send(res, 200, {
     role: r,
     roleLabel: ROLES[r],
@@ -64,9 +66,9 @@ export async function me({ res, role, user }) {
       keys_decisions: settings.keys_decisions,
       keys_confirm: settings.keys_confirm,
     },
-    llmProvider: await refreshProvider(),
-    llmProviderLabel: providerLabel(),
-    llmModel: providerModel(),
+    llmProvider: llm?.provider || "inconnu",
+    llmProviderLabel: llm?.label || "moteur inconnu (worker arrêté ?)",
+    llmModel: llm?.model || null,
     llmLastRun: lastGen ? {
       at: lastGen.at,
       provider: lastGen.stats?.provider || null,

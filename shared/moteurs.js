@@ -71,3 +71,19 @@ export function estRouteur(model) {
   const nom = m.includes("/") ? m.slice(m.indexOf("/") + 1) : m;
   return !!m && (m.startsWith("~") || m.startsWith("openrouter/auto") || nom.includes("router"));
 }
+
+/* Réglages → plan de relance (M3-55, déplacé de src/generate/relance.js en T20b). Liste « moteur:modèle, moteur » (virgule, point-
+   virgule ou retour à la ligne) ; seul le premier « : » sépare le modèle. */
+export function planRelance(settings = {}) {
+  const max = Math.max(0, Math.min(3, Math.round(Number(settings.llm_regen_max) || 0)));
+  const engines = String(settings.llm_regen_engines ?? "")
+    .split(/[,;\n]/).map((t) => t.trim()).filter(Boolean)
+    .map((t) => {
+      const i = t.indexOf(":");
+      const id = (i < 0 ? t : t.slice(0, i)).trim();
+      const model = i < 0 ? "" : t.slice(i + 1).trim();
+      return { id, model: model || null };
+    })
+    .filter((e) => e.id);
+  return { max, engines };
+}
