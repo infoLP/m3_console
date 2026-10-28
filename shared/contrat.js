@@ -20,14 +20,10 @@ export const JOB_KINDS = [
    l'interactive ; la voie « fond » (R9) porte le scan des concurrents, qui peut
    durer une heure et ne doit retenir ni la récolte ni la génération demandées
    depuis la console. Aucune n'est bloquée par une autre. La voie n'est pas en base :
-   la changer ne demande pas de migration.
-
-   regenerate reste dans la chaîne : les compteurs LLM et le moteur courant
-   sont globaux au processus, une régénération en parallèle d'une génération
-   fausserait ses comptes (isolation prévue en T32). */
+   la changer ne demande pas de migration. */
 export const VOIES = {
-  chaine: ["harvest", "generate", "test_models", "rescore", "restore_sources", "regenerate"],
-  articles: ["publish"],
+  chaine: ["harvest", "generate", "test_models", "rescore", "restore_sources"],
+  articles: ["publish", "regenerate"],
   fond: ["competitor_scan"],
   interactive: ["test_source", "test_wp_target", "test_llm", "fetch_models", "preview_prompt", "resolve_communes"],
 };
@@ -117,6 +113,28 @@ export const SITE_ICON_KEY = "site_icon";
    écrit par l'ordonnanceur du moteur, et le registre des dépenses LLM. */
 export const KV_PLANIFICATION = "schedule/state.json";
 export const KV_DEPENSES_LLM = "llm/spend.json";
+
+/* Autres clés kv et seuil que la console lit sans importer le moteur (T26) :
+   - KV_ETAT_SOURCES : état de récolte par source (furtif, quarantaine), écrit
+     par harvestRun, lu et retouché par l'écran Sources ;
+   - KV_VERROU_SCAN : bail « competitors » du scan des concurrents
+     (src/lib/runLock.js écrit locks/<nom>.json), lu pour dire « scan en cours » ;
+   - KV_PLANIF_CONCURRENTS : dernier créneau du scan planifié ;
+   - SOURCE_LISIBLE_MIN : signes de texte source en dessous desquels finalize
+     saute les contrôles de citations et de lieux, et la console dit « source
+     mince » dans les preuves. */
+export const KV_ETAT_SOURCES = "harvest/sources-state.json";
+export const KV_VERROU_SCAN = "locks/competitors.json";
+export const KV_PLANIF_CONCURRENTS = "schedule/competitors.json";
+export const SOURCE_LISIBLE_MIN = 200;
+
+/* Clés des consignes que rend la relecture (src/llm/prompts/review.js,
+   CLES_CONSIGNES), dans son ordre : le panneau Preuves de la console les
+   affiche. Chaque côté vérifie sa liste contre celle-ci. */
+export const CLES_CONSIGNES_RELECTURE = Object.freeze([
+  "style_phrases_creuses", "chapo_factuel", "fin_concrete", "angle",
+  "communique_non_explique", "date_redigee", "partenaire_signale",
+]);
 
 /* « 2026-10-12 » et « 2026-10 », à l'heure de Paris : les tranches du registre
    des dépenses (KV_DEPENSES_LLM). fr-CA formate déjà en AAAA-MM-JJ, ce qui

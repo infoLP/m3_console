@@ -17,7 +17,7 @@
  */
 
 import { closePool } from "../src/lib/db.js";
-import { isMain } from "../src/lib/main.js";
+import { isMain } from "./estPrincipal.js";
 import { createIpBans, pgRepo } from "../src/lib/ipBan.js";
 
 function arg(name, argv) {

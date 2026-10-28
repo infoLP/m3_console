@@ -4,8 +4,8 @@
 #
 # PAS DE MIGRATION AU DÉMARRAGE : le schéma appartient au moteur (dépôt M3),
 # qui applique ses migrations avant de démarrer son worker. Déployer le moteur
-# d'abord. migrations/ n'est copié ici qu'en lecture, pour /api/health (liste
-# des migrations attendues).
+# d'abord. La console n'a aucune copie des migrations : /api/health compare la
+# base à sa propre liste (src/diagnostiquerService/sante.regles.js).
 # ---------------------------------------------------------------------------
 
 FROM node:24-alpine AS deps
@@ -32,8 +32,6 @@ COPY --from=build --chown=node:node /app/.next/static ./.next/static
 COPY --from=build --chown=node:node /app/public ./public
 # Lus par chemin à l'exécution (le traçage de Next ne les voit pas).
 COPY --chown=node:node config ./config
-COPY --chown=node:node migrations ./migrations
-COPY --chown=node:node src/generate/communes.fr.json ./src/generate/communes.fr.json
 # Outils d'exploitation (T25c, R12) : créer le premier administrateur, lever un
 # bannissement, par « docker exec <conteneur> node outils-console/userAdmin.js … ».
 # Ils n'importent que src/lib (db, log, redact, racine, auth, main, ipBan,

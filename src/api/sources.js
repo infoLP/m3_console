@@ -10,7 +10,9 @@ import { reliabilityOf } from "../../shared/sourceReliability.js";
 /* État de récolte tenu par le moteur (src/ingest/harvestRun.js de M3) : même clé
    kv et même délai de revérification du furtif, recopiés ici pour ne pas
    importer le moteur (T21c). */
-export const SOURCES_STATE_KEY = "harvest/sources-state.json";
+/* Écrit par la récolte du moteur, lu et retouché ici : clé du contrat (T26). */
+export { KV_ETAT_SOURCES as SOURCES_STATE_KEY } from "../../shared/contrat.js";
+import { KV_ETAT_SOURCES as SOURCES_STATE_KEY } from "../../shared/contrat.js";
 export const FURTIF_RECHECK_MS = 7 * 86400000;
 
 /* Test d'une source, communes, restauration du référentiel : demandes au

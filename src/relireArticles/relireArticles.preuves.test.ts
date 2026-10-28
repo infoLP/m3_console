@@ -11,7 +11,6 @@ import {
   etatPreuve, etatSourceDe, lecturePreuves, MOTIF_RELECTURE_AUTO, NON_CONSERVE, pireEtat, preuvesDe, SOURCE_LISIBLE_MIN, verdictPreuves,
   type Article, type Preuve,
 } from "./relireArticles.regles";
-import { SOURCE_LISIBLE_MIN as SEUIL_CHAINE } from "../generate/finalize.js";
 import { Preuves } from "../app/(console)/console/Preuves";
 
 const SOURCE = "La mairie de Rochefort ouvrira une nouvelle médiathèque au printemps prochain. ".repeat(6);
@@ -284,8 +283,8 @@ describe("lecturePreuves : l'ordre de lecture", () => {
 });
 
 describe("état de la source (motif des non mesurés)", () => {
-  it("le seuil de lisibilité est celui de la chaîne", () => {
-    assert.equal(SOURCE_LISIBLE_MIN, SEUIL_CHAINE);
+  it("le seuil de lisibilité est celui du contrat (celui de la chaîne)", () => {
+    assert.equal(SOURCE_LISIBLE_MIN, 200);
   });
   it("illisible : texte trop mince, ou extraction de repli du mock", () => {
     const e = etatSourceDe(complet({ checks: undefined, origin: { rawText: "Court." } }));
@@ -322,11 +321,11 @@ describe("Preuves.tsx (rendu statique)", () => {
   });
 });
 
-/* La liste des consignes est recopiée ici (le panneau n'importe pas la chaîne
-   de génération) : elle doit rester celle que la relecture rend. */
+/* La liste des consignes est dans le contrat (T26), que le moteur vérifie contre
+   sa relecture : le panneau doit en connaître exactement les clés. */
 describe("consignes de relecture (M3-113, lot D)", () => {
   it("le panneau connaît exactement les clés que rend la relecture", async () => {
-    const { CLES_CONSIGNES } = await import("../llm/prompts/review.js");
+    const { CLES_CONSIGNES_RELECTURE: CLES_CONSIGNES } = await import("@shared/contrat.js");
     const { CONSIGNES_RELECTURE } = await import("./relireArticles.regles");
     assert.deepEqual(CONSIGNES_RELECTURE.map((k) => k.cle), [...CLES_CONSIGNES]);
   });

@@ -10,7 +10,7 @@ import { readFile } from "node:fs/promises";
 
 import {
   ALLOWED_MODELS, allowlistApplies, isModelAllowed, isModelAllowedFor, isModelSavable, resolveAllowedModel,
-} from "../src/llm/allowlist.js";
+} from "../shared/allowlist.js";
 
 const REF = "mistralai/mistral-small-2603";
 const provider = (defaultModel) => ({ id: "openrouter", label: "OpenRouter", defaultModel });
@@ -67,15 +67,8 @@ test("résolution : aucun modèle du tout reste l'erreur d'avant, pas un refus d
     /Aucun modèle choisi/.test(err.message) && err.code !== "MODEL_NOT_ALLOWED");
 });
 
-/* Une installation neuve doit produire de vrais articles sans toucher à la
-   liste : le modèle que la migration 006 pose par défaut doit y figurer. Sinon
-   la liste blanche ferait retomber toute installation de référence sur le mock. */
-test("liste blanche : le modèle par défaut de la migration 006 est autorisé", async () => {
-  const sql = await readFile(new URL("../migrations/006_llm_providers.sql", import.meta.url), "utf8");
-  const seeded = sql.match(/\('openrouter',[^)]*'([^']+\/[^']+)'/);
-  assert.ok(seeded, "modèle par défaut d'OpenRouter introuvable dans la migration 006");
-  assert.equal(isModelAllowed(seeded[1]), true, `${seeded[1]} absent de la liste blanche`);
-});
+/* T26 : « le modèle par défaut de la migration 006 est autorisé » est au moteur,
+   propriétaire des migrations (M3 test/modelAllowlist.test.js). */
 
 /* ------------------------------------------- exemption d'OpenRouter — M3-68 */
 
@@ -184,16 +177,16 @@ test("enregistrement : sans modèle dans le patch, rien à juger", () => withEnv
    touchent la base ou le réseau. Une régression qui remettrait le contrôle
    d'avant M3-68 (isModelAllowed seul) dans l'un des trois points de contrôle
    passerait tous les tests sans ce relevé du source. */
-test("câblage : les trois points de contrôle tiennent compte de l'exemption", async () => {
+test("câblage : les points de contrôle de la console tiennent compte de l'exemption", async () => {
   const src = (p) => readFile(new URL(`../src/${p}`, import.meta.url), "utf8");
-  const [api, index, providers] = await Promise.all([src("api/llm.js"), src("llm/index.js"), src("lib/llmProviders.js")]);
+  /* T26 : l'appel de génération (src/llm/index.js) est au moteur, dont le test
+     garde sa propre assertion (M3 test/modelAllowlist.test.js). */
+  const [api, providers] = await Promise.all([src("api/llm.js"), src("lib/llmProviders.js")]);
   /* T20c : le test de connexion est fait par le moteur (demande test_llm, qui
      applique isModelAllowedFor : M3 src/jobs/taches/test_llm.js, test/llmTaches.test.js).
      La console dépose la demande ; elle ne doit pas revenir au contrôle seul. */
   assert.match(api, /demander\("test_llm"/, "test de connexion : déposé au moteur");
   assert.doesNotMatch(api, /[^.\w]isModelAllowed\(/, "test de connexion : isModelAllowed seul");
-  /* `engine` depuis M3-88 : le moteur qui sert l'appel (principal, secours, relecture). */
-  assert.match(index, /resolveAllowedModel\(engine, opts\.model\)/, "appel de génération");
   assert.match(providers, /isModelSavable\(patch, /, "enregistrement");
   assert.match(providers, /modelAllowed: isModelAllowedFor\(r, r\.defaultModel\)/, "affichage");
 });

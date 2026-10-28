@@ -4,22 +4,15 @@ import type { NextConfig } from "next";
    assumer (docs/plans/PLAN-nextjs-migration.md, « Configuration Next.js »). */
 const nextConfig: NextConfig = {
   /* m3_console (extraire-console.mjs) : sortie standalone. Les fichiers lus par
-     chemin (config/*.baseline.yml, migrations/, src/generate/communes.fr.json)
-     sont copiés à côté de server.js par le Dockerfile ; ROOT (src/lib/racine.js)
-     retombe alors sur le répertoire courant, /app. Le commentaire ci-dessous
-     date de M3. */
+     chemin (config/*.baseline.yml), que le traçage de Next ne voit pas, sont
+     copiés à côté de server.js par le Dockerfile ; ROOT (src/lib/racine.js)
+     retombe alors sur le répertoire courant, /app. */
   output: "standalone",
 
-  /* Pas de `output: "standalone"` pour l'instant (V2 du plan) : le métier lit des
-     fichiers par chemin (config/*.baseline.yml, migrations/) que le traçage de
-     fichiers ne voit pas. L'image Docker embarque l'arbre complet ; standalone
-     se revisite en fin de migration. */
-
-  /* pg, cheerio, pdf-parse et consorts restent des modules Node ordinaires,
-     chargés depuis node_modules à l'exécution : pdf-parse 1.1.4 lit un fichier
-     de test à l'import, et le bundler le casserait. playwright et crawlee
-     (crawlers de repli de la récolte, M3-57) sont chargés par import dynamique. */
-  serverExternalPackages: ["pg", "cheerio", "pdf-parse", "rss-parser", "yaml", "xlsx", "playwright", "playwright-core", "crawlee"],
+  /* pg et yaml restent des modules Node ordinaires, chargés depuis node_modules
+     à l'exécution. T26 : les dépendances du moteur (cheerio, pdf-parse,
+     rss-parser, xlsx, playwright, crawlee) ne sont plus dans la console. */
+  serverExternalPackages: ["pg", "yaml"],
 
   turbopack: {
     rules: {

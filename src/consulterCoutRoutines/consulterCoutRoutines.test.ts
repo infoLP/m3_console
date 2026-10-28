@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { coutAffiche, coutMoyenArticle, coutParArticle, fmtUsd, totaux, typeRoutine } from "./coutRoutines.calcul.js";
-import { resumeRoutine } from "../lib/routineContext.js";
 
 const PARIS = new Intl.DateTimeFormat("fr-CA", { timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit" });
 const periode = (t: number) => { const day = PARIS.format(new Date(t)); return { day, month: day.slice(0, 7) }; };
@@ -45,16 +44,6 @@ describe("coût des routines (M3-105)", () => {
     assert.ok(Math.abs((coutMoyenArticle(t.mois) ?? 0) - 0.01) < 1e-9);
     assert.equal(coutMoyenArticle({ cout: 0, tokens: 0, articles: 2, articlesCoutConnu: 0, routines: 1, inconnus: 1 }), null);
   });
-  it("résumé : coûts additionnés, mock sans usage ignoré, coût inconnu gardé null", () => {
-    const r = resumeRoutine({ id: "rt", origine: "planifiee", at: "x", runs: [
-      { kind: "harvest", stats: { items: 5 } },
-      { kind: "generation", stats: { created: 2, provider: "openrouter", usage: { totalTokens: 300, cost: 0.02, billedCalls: 2 } } },
-      { kind: "generation", stats: { created: 1, provider: "mock", usage: null } },
-    ] });
-    assert.deepEqual(r.recolte, { items: 5, cout: null });
-    assert.deepEqual([r.generation?.crees, r.generation?.cout, r.generation?.tokens], [3, 0.02, 300]);
-    const sansCout = resumeRoutine({ id: "rt", origine: "manuelle", at: "x", runs: [{ kind: "generation", stats: { created: 1, usage: { totalTokens: 80, cost: null, billedCalls: 1 } } }] });
-    assert.equal(sansCout.generation?.cout, null);
-    assert.equal(sansCout.statut, "ok");
-  });
+  /* T26 : le résumé d'une routine (resumeRoutine) est une fonction du moteur ;
+     son test est parti avec elle (M3 test/routineContext.test.js). */
 });

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { bandeau, brouillonDe, estRouteur, etatSecours, etatTests, modeleSecours, modelesProposes, patchDe, TEST_PERIME_MS, testEnCours, valeurSecours, type Moteur } from "./gererMoteursIA.regles";
 import { baliserPourApercu, ciblesPrompts, cleCible, erreursPrompt, etatCible, famillesVariables, filHeritage, heritage, insererVariable, modelesPourSurcharge, segmentsApercu, texteInitial, type PromptsLLM, type VersionPrompt } from "./gererMoteursIA.regles";
-import { DEFAULT_TEMPLATE, PROMPT_VARIABLES, renderTemplate } from "@/llm/prompts/template.js";
+import { DEFAULT_TEMPLATE, PROMPT_VARIABLES, renderTemplate } from "@shared/promptTemplate.js";
 
 const M = (p: Partial<Moteur>): Moteur => ({ id: "m", label: "Moteur", kind: "openai", baseUrl: "https://x", enabled: true, active: false, hasKey: false, ...p });
 

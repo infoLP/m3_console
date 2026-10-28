@@ -16,7 +16,9 @@ import { enqueue } from "./demandes.js";
 import { scanSettings, upcomingSlot, slotToIso } from "../../shared/slots.js";
 
 export const CANDIDATE_STATUSES = ["nouveau", "propose", "ajoute", "ecarte"];
-export const SCAN_LOCK_KEY = "locks/competitors.json";
+/* Bail « competitors » du moteur (src/lib/runLock.js) : clé du contrat (T26). */
+export { KV_VERROU_SCAN as SCAN_LOCK_KEY } from "../../shared/contrat.js";
+import { KV_VERROU_SCAN as SCAN_LOCK_KEY } from "../../shared/contrat.js";
 export const LAST_SCAN_KEY = "competitors/lastScan.json";
 
 const fail = (status, message) => Object.assign(new Error(message), { status });
