@@ -6,13 +6,14 @@
    n'est pas déclarée (shared/feats.js), elle compte comme fermée.
 
    Totaux : la somme des routines (cohérente avec le tableau), et en dessous la
-   dépense LLM totale du registre (src/llm/budget.js), qui compte aussi les
-   régénérations et relectures faites hors routine (choix de l'utilisateur). */
+   dépense LLM totale du registre (kv KV_DEPENSES_LLM, tenue par le moteur),
+   qui compte aussi les régénérations et relectures faites hors routine (choix
+   de l'utilisateur). La console la lit en base, sans importer le moteur (T24). */
 
 import { send } from "../lib/http.js";
-import { readRoutines } from "../lib/store.js";
+import { readJson, readRoutines } from "../lib/store.js";
 import { readSettings } from "../lib/yamlStore.js";
-import { periodKeys, readLedger } from "../llm/budget.js";
+import { KV_DEPENSES_LLM, periodKeys } from "../../shared/contrat.js";
 import { ROUTINES_AFFICHEES, totaux, coutRoutinesOuvert } from "./coutRoutines.calcul.js";
 export { coutRoutinesOuvert, masquerCouts } from "./coutRoutines.calcul.js";
 
@@ -21,7 +22,7 @@ export async function coutRoutines({ res, role, now = Date.now() }) {
   const routines = await readRoutines();
   let registre = null;
   try {
-    const l = await readLedger();
+    const l = await readJson(KV_DEPENSES_LLM, null);
     const { day, month } = periodKeys(now);
     const pick = (u) => (u ? { cout: u.cost ?? null, tokens: u.totalTokens || 0 } : { cout: 0, tokens: 0 });
     registre = { jour: pick(l?.days?.[day]), mois: pick(l?.months?.[month]) };

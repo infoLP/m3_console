@@ -1,9 +1,10 @@
 import { send } from "../lib/http.js";
 import { readCollection, readJson, dataPath } from "../lib/store.js";
 import { query } from "../lib/db.js";
-import { scheduleStatus } from "../schedule/scheduler.js";
-import { enqueue, lastJobs } from "../jobs/queue.js";
+import { enqueue, lastJobs } from "../lib/demandes.js";
 import { readSettings } from "../lib/yamlStore.js";
+import { parseTimes, upcomingSlot } from "../../shared/slots.js";
+import { KV_PLANIFICATION } from "../../shared/contrat.js";
 import { coutRoutinesOuvert, masquerCouts } from "../consulterCoutRoutines/coutRoutines.calcul.js";
 
 /* Depuis la phase 1 de la migration Next.js, le serveur web n'exécute plus la
@@ -15,6 +16,28 @@ import { coutRoutinesOuvert, masquerCouts } from "../consulterCoutRoutines/coutR
 export async function harvest({ res, body, user }) {
   const job = await enqueue("harvest", { limit: Number(body.limit) || 0, only: body.only || null }, user);
   send(res, 202, { ok: true, job });
+}
+
+/* État lisible de la planification, pour l'onglet Dernier run (T24) : les
+   réglages et les créneaux viennent de la console (shared/slots.js), l'état
+   d'exécution (dernier créneau, en cours, dernier résultat) de la kv que
+   l'ordonnanceur du moteur écrit. Même forme que l'ancien scheduleStatus du
+   moteur, que la console importait. */
+export async function scheduleStatus(now = Date.now()) {
+  const settings = await readSettings();
+  const state = (await readJson(KV_PLANIFICATION, {})) || {};
+  const parsed = parseTimes(settings.schedule_times);
+  const actif = settings.schedule_enabled === "oui";
+  return {
+    enabled: actif,
+    times: parsed.times || [],
+    error: parsed.error || null,
+    next: actif && parsed.times ? upcomingSlot(parsed.times, now) : null,
+    lastSlot: state.lastSlot || null,
+    running: state.running || null,
+    lastRun: state.lastRun || null,
+    lastSkipped: state.lastSkipped || null,
+  };
 }
 
 export async function lastRun({ res, role }) {
