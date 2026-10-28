@@ -1,0 +1,248 @@
+/* M3 — back-office. */
+
+/* width:100% : même raison que .cr-shell dans base.css — marges automatiques et
+   grille ne font pas bon ménage, l'élément cesse d'être étiré à sa piste. Sans
+   ça le tableau des sources élargit toute la coque au lieu de défiler dans son
+   .bo-scroll. */
+.bo-shell{width:100%;max-width:1180px;margin:0 auto;padding:24px 22px 80px;position:relative;z-index:1}/* Onglets en table (sources, utilisateurs, runs) : le plafond de lecture n'a pas
+   lieu d'être, et il coûtait cher — la table des sources défilait sur un écran
+   qui laissait 500 px de marge vide de chaque côté. 1760 px, et non « aucun
+   plafond » : au-delà, les champs d'une même ligne s'éloignent au point qu'on ne
+   suit plus la ligne de l'œil. */
+.bo-shell--large{max-width:1760px}
+.bo-top{display:flex;align-items:center;justify-content:space-between;gap:var(--space-5);padding-bottom:18px;margin-bottom:22px;border-bottom:1px solid var(--line-2);flex-wrap:wrap}
+.bo-title{font-family:var(--serif);font-size:24px;font-weight:600}
+.bo-sub{font-size:var(--text-base);color:var(--ink-2)}
+/* .bo-tabs / .bo-tab supprimés : les sept onglets sont passés dans la colonne de
+   navigation, qui est commune à la console et au back-office (base.css). */
+
+.bo-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;margin-bottom:var(--space-4)}
+/* Petits titres en casse de phrase (M3-99) : plus de capitales espacées, ni ici
+   ni en en-tête de tableau, ni sur les badges et intertitres de l'onglet LLM. */
+.bo-card h3{font-size:var(--text-xs);color:var(--ink-3);font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:var(--space-2);justify-content:space-between}
+.bo-actions{display:flex;gap:var(--space-2);flex-wrap:wrap;margin-bottom:14px}
+.bo-btn{font-size:var(--text-base);font-weight:600;border:1px solid var(--line-2);border-radius:var(--r-sm);padding:8px 13px;background:var(--surface);color:var(--ink-2);display:flex;align-items:center;gap:6px}
+.bo-btn:hover{background:var(--surface-2);color:var(--ink)}
+.bo-btn.primary{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
+.bo-btn.danger{color:var(--stop);border-color:color-mix(in srgb,var(--stop) 40%,transparent)}
+
+.bo-table{width:100%;border-collapse:collapse;font-size:var(--text-base)}
+.bo-table th{text-align:left;color:var(--ink-3);font-weight:600;font-size:var(--text-xs);padding:8px 10px;border-bottom:1px solid var(--line)}
+.bo-table td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.bo-table tr:hover td{background:var(--surface-2)}
+.bo-table input,.bo-table select{width:100%;font-size:var(--text-xs);border:1px solid var(--line);border-radius:var(--r-sm);padding:5px 7px;background:var(--surface-2)}
+.bo-table .mono{font-family:var(--mono);font-size:var(--text-xs)}
+/* Intertitre d'organisation (M3-59) : sépare les groupes sans se confondre avec une ligne éditable. */
+.bo-table tr.bo-group td{background:var(--surface-2);padding:10px 10px 6px;border-bottom:1px solid var(--line);font-size:var(--text-sm)}
+.bo-table tr.bo-group td svg{vertical-align:-2px;margin-right:6px;color:var(--ink-3)}
+/* Onglet Paramètres : l'explication sous le libellé, la valeur étroite. */
+.bo-settings td:first-child{max-width:560px}
+.bo-settings td:nth-child(2){width:180px}
+.bo-settings .bo-help{margin-top:var(--space-1);line-height:1.45}
+.bo-settings tr.bo-group .bo-note{margin-top:var(--space-1);font-weight:400}
+/* Journal (M3-81) : le détail se déplie sous l'événement, sans élargir la ligne. */
+.bo-jl td{vertical-align:top}
+.bo-btn.primary .bo-note{color:inherit;opacity:.85}
+.bo-jl-d{margin-top:var(--space-1);font-size:var(--text-xs);max-width:640px;overflow-wrap:anywhere}
+.bo-jl-d summary{cursor:pointer}
+/* Sections repliables (M3-82) : tout l'intitulé est cliquable. */
+.bo-fold-btn{all:unset;cursor:pointer;display:flex;align-items:baseline;gap:var(--space-2);width:100%}
+.bo-fold-btn:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:var(--r-xs)}
+.bo-fold-btn .bo-note{margin-top:0}
+.bo-fold-ic{display:inline-block;width:1em;color:var(--ink-3)}
+/* Zones couvertes : une région par bloc repliable, ses départements en grille.
+   La grille vit dans un conteneur : posée sur <details>, elle n'est pas appliquée.
+   Les cases reprennent leur taille : `.bo-table input` les étirait à 100 %. */
+.bo-settings td.bo-zones-cell{width:45%;min-width:340px}
+.bo-zones{max-height:360px;overflow:auto;display:flex;flex-direction:column;gap:6px;padding-right:var(--space-1)}
+.bo-zone-reg{border:1px solid var(--line);border-radius:var(--r-sm);padding:6px 10px}
+.bo-zone-reg summary{cursor:pointer;padding:2px 0}
+.bo-zone-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:4px 14px;margin-top:6px}
+.bo-zone-grid .bo-zone-all{grid-column:1/-1;font-weight:600;padding-bottom:var(--space-1);border-bottom:1px solid var(--line)}
+.bo-zone-grid label{display:flex;align-items:center;gap:var(--space-2);font-size:var(--text-sm);line-height:1.3;cursor:pointer}
+.bo-table .bo-zone-grid input[type="checkbox"]{width:auto;flex:none;margin:0;padding:0}
+.bo-zone-grid .mono{color:var(--ink-3);min-width:2.2em;display:inline-block}
+.bo-pill{display:inline-flex;align-items:center;gap:var(--space-1);font-size:var(--text-xs);font-weight:600;padding:2px 7px;border-radius:var(--r-pill)}
+.bo-pill.on{background:var(--go-tint);color:var(--go)}
+.bo-pill.off{background:var(--surface-3);color:var(--ink-2)}
+.bo-pill.a{background:var(--brand-tint);color:var(--brand-ink)}
+/* Tons de la colonne Fiabilité (score à côté, jamais le ton seul). */
+.bo-pill.warn{background:var(--amber-tint);color:var(--amber)}
+.bo-pill.bad{background:var(--stop-tint);color:var(--stop)}
+.bo-scroll{overflow-x:auto}
+
+/* ---------- colonne de tête figée ----------
+   Huit colonnes en lecture (M3-110) tiennent mieux, mais sur un petit écran
+   le défilement horizontal reste légitime. Ce qui ne l'était pas, c'est de perdre
+   le NOM de la source en défilant — on réglait un intervalle sans savoir sur
+   quelle ligne. La première colonne reste donc collée à gauche.
+   Le fond opaque est indispensable : une cellule collante transparente laisserait
+   défiler le reste du tableau par-dessous. D'où aussi la reprise du survol et de
+   la ligne de groupe, qui ont chacun leur propre fond. */
+.bo-table th:first-child,
+.bo-table td:first-child{position:sticky;left:0;z-index:1;background:var(--surface)}
+.bo-table th:first-child{z-index:2}
+.bo-table tr:hover td:first-child{background:var(--surface-2)}
+.bo-table tr.bo-group td:first-child{background:var(--surface-2)}
+/* Un filet marque la césure, sinon la colonne figée paraît flotter sur le reste. */
+.bo-table th:first-child::after,
+.bo-table td:first-child::after{content:"";position:absolute;top:0;right:0;bottom:0;
+  width:1px;background:var(--line)}
+
+.bo-note{font-size:var(--text-xs);color:var(--ink-2)}
+.bo-deny{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:48px 30px;text-align:center}
+.bo-deny h3{font-family:var(--serif);font-size:var(--text-2xl);margin-bottom:var(--space-2)}
+.bo-row-line{display:flex;gap:10px;padding:10px 0;border-bottom:1px dashed var(--line);font-size:var(--text-base)}
+.bo-sev-error{color:var(--stop)} .bo-sev-warning{color:var(--amber)} .bo-sev-info{color:var(--ink-3)}
+select.bo-role{font-size:var(--text-base);font-weight:600;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:8px 10px}
+
+.bo-hint{margin:0 0 var(--space-3);font-size:var(--text-xs);line-height:1.55;color:var(--ink-3);background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-sm);padding:9px 11px}
+
+/* ---------- onglet LLM ---------- */
+.bo-card-h{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);margin-bottom:14px}
+.bo-card-h h3{margin-bottom:0}
+.llm-state{display:flex;align-items:center;gap:var(--space-2);font-size:var(--text-base);border-radius:var(--r-sm);
+  padding:10px 13px;margin-bottom:var(--space-3);line-height:1.45}
+.llm-state.ok{background:var(--go-tint);color:var(--go)}
+.llm-state.warn{background:var(--amber-tint);color:var(--amber)}
+.llm-state code{font-size:var(--text-xs)}
+/* Un moteur n'est pas une carte dans la carte : une section, séparée par un filet. */
+.llm-list{display:flex;flex-direction:column;margin-top:14px}
+.llm-card{border-top:1px solid var(--line)}
+.llm-head{width:100%;display:flex;align-items:center;gap:10px;padding:11px 14px;
+  font-size:var(--text-base);color:var(--ink);background:none;text-align:left}
+.llm-head:hover{background:var(--surface-3)}
+.llm-kind{font-size:var(--text-xs);color:var(--ink-3)}
+.llm-badge{font-size:var(--text-xs);font-weight:700;
+  padding:2px 7px;border-radius:var(--r-sm);background:var(--surface-3);color:var(--ink-3)}
+.llm-badge.on{background:var(--go-tint);color:var(--go)}
+.llm-badge.off{background:var(--stop-tint);color:var(--stop)}
+.llm-body{padding:4px 14px 16px;border-top:1px solid var(--line)}
+.llm-sep{font-size:var(--text-xs);color:var(--ink-3);
+  font-weight:700;margin:16px 0 10px;padding-top:var(--space-3);border-top:1px dashed var(--line)}
+.llm-field{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap}
+.llm-field > label{width:130px;flex-shrink:0;font-size:var(--text-xs);color:var(--ink-2)}
+.llm-field .bo-in{flex:1;min-width:220px}
+/* L'empreinte n'est pas un champ : la donner à voir comme tel ferait croire
+   qu'on peut l'éditer, alors que la clé ne se remplace qu'en entier. */
+.llm-hint{flex:1;min-width:200px;font-family:var(--mono);font-size:var(--text-xs);
+  color:var(--ink-3);background:var(--surface-3);border-radius:var(--r-sm);padding:8px 11px}
+/* Case à cocher et son libellé ; .bo-check pour les filtres (case + libellé, pas un bouton). */
+.llm-toggle,.bo-check{display:flex;align-items:center;gap:7px;font-size:var(--text-base);color:var(--ink-2)}
+.llm-note{font-size:var(--text-xs);color:var(--ink-3);margin:6px 0 0 140px}
+.llm-note.warn{color:var(--amber);line-height:1.5}
+.llm-warn{flex:1;min-width:240px;font-size:var(--text-xs);line-height:1.5;color:var(--amber);
+  background:var(--amber-tint);border-radius:var(--r-sm);padding:9px 12px;display:flex;gap:7px}
+.llm-warn code{font-size:var(--text-xs)}
+.llm-actions{display:flex;gap:var(--space-2);margin-top:18px;flex-wrap:wrap;
+  padding-top:14px;border-top:1px dashed var(--line)}
+@media (max-width:720px){
+  .llm-field > label{width:100%}
+  .llm-note{margin-left:0}
+}
+
+/* ---------- M3-111 : éditeur de prompts expliqué ---------- */
+/* Texte d'aide pleine largeur (le .llm-note est décalé sous les libellés). */
+.llm-prompt-aide{font-size:var(--text-xs);color:var(--ink-3);line-height:1.5;margin:var(--space-2) 0 0}
+.llm-prompt-aide.warn{color:var(--amber)}
+.llm-prompt-aide ul{margin:var(--space-1) 0 0;padding-left:var(--space-4)}
+.llm-prompt-bloc{margin-top:var(--space-3)}
+/* Fil d'héritage : du niveau édité au défaut du code, le maillon en vigueur appuyé. */
+.llm-prompt-fil{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2);list-style:none;margin:0;padding:0}
+.llm-prompt-maillon{display:flex;align-items:center;gap:var(--space-2);font-size:var(--text-sm);color:var(--ink-3);
+  padding:var(--space-1) var(--space-2);border:1px solid var(--line);border-radius:var(--r-sm)}
+.llm-prompt-maillon + .llm-prompt-maillon::before{content:"→";color:var(--ink-3);margin-right:var(--space-1)}
+.llm-prompt-maillon.en_vigueur{color:var(--ink);font-weight:600;border-color:var(--go);background:var(--go-tint)}
+.llm-prompt-replie{margin-top:var(--space-3);font-size:var(--text-sm);color:var(--ink-2)}
+.llm-prompt-replie > summary{cursor:pointer;font-weight:600}
+/* Texte et aperçu côte à côte sur grand écran, empilés en dessous. */
+.llm-prompt-duo{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--space-4);margin-top:var(--space-3)}
+@media (min-width:1100px){
+  .llm-prompt-duo.avec-apercu{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+}
+.llm-prompt-col{display:flex;flex-direction:column;min-width:0}
+.llm-prompt-titre-col{font-size:var(--text-xs);font-weight:700;color:var(--ink-2);margin-bottom:var(--space-1)}
+.llm-prompt-apercu{margin:0;max-height:560px;overflow:auto;white-space:pre-wrap;word-break:break-word}
+.llm-prompt-valeur{background:var(--brand-tint);color:var(--brand-ink);border-radius:var(--r-xs);box-shadow:inset 0 -2px 0 var(--brand)}
+/* Légende des variables, par famille. */
+.llm-prompt-legende{margin-top:var(--space-5);padding-top:var(--space-3);border-top:1px dashed var(--line)}
+.llm-prompt-legende h4{margin:0;font-size:var(--text-base)}
+.llm-prompt-famille{margin-top:var(--space-4)}
+.llm-prompt-famille h5{margin:0;font-size:var(--text-sm);color:var(--ink-2)}
+.llm-prompt-vars{list-style:none;margin:var(--space-2) 0 0;padding:0;display:grid;gap:var(--space-2);
+  grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr))}
+.llm-prompt-var{border:1px solid var(--line);border-radius:var(--r-sm);padding:var(--space-2) var(--space-3);min-width:0}
+.llm-prompt-var-h{display:flex;align-items:center;flex-wrap:wrap;gap:var(--space-2)}
+.llm-prompt-desc,.llm-prompt-ex{margin:var(--space-1) 0 0;font-size:var(--text-xs);line-height:1.5;color:var(--ink-2)}
+.llm-prompt-ex{color:var(--ink-3);overflow-wrap:anywhere}
+.llm-prompt-ex > span{font-weight:600}
+
+/* Les champs du back-office n'étaient stylés qu'à l'intérieur de .bo-table ;
+   l'onglet LLM est en fiches, pas en tableau, d'où cette classe explicite. */
+.bo-in{font:inherit;font-size:var(--text-base);border:1px solid var(--line);border-radius:var(--r-sm);
+  padding:8px 11px;background:var(--surface-2);color:var(--ink)}
+/* Sans outline:none : il annulait l'anneau :focus-visible de base.css. */
+.bo-in:focus{border-color:var(--brand);background:var(--surface)}
+.bo-in.mono{font-family:var(--mono);font-size:var(--text-xs)}
+/* Icône du site (Paramètres) : aperçu sur damier, pour voir la transparence. */
+.bo-site-icon{display:flex;gap:var(--space-4);align-items:flex-start}
+.bo-site-icon-prev{width:48px;height:48px;flex:none;border:1px solid var(--line);border-radius:var(--r-sm);object-fit:contain;background:repeating-conic-gradient(var(--line) 0 25%,transparent 0 50%) 0 0/12px 12px}
+.bo-site-icon-none{display:grid;place-items:center;color:var(--ink-3)}
+
+/* ---------- onglet Sources (M3-110) ----------
+   Table en lecture, édition dans le panneau (Tiroir du socle). */
+.bo-recherche{min-width:min(100%,16rem);flex:1 1 16rem}
+.bo-actions .bo-enregistrer{margin-left:auto}
+.bo-vide{margin-top:var(--space-3)}
+/* Puces « n avec un problème » : un bouton bascule par cause (aria-pressed).
+   L'état pressé se lit aussi au contour, pas à la seule couleur. */
+.bo-puces{display:flex;flex-wrap:wrap;gap:var(--space-2);margin-bottom:var(--space-3)}
+.cr .bo-puce{display:inline-flex;align-items:center;gap:var(--space-1);font-size:var(--text-xs);padding:var(--space-1) var(--space-3);
+  border:1px solid var(--line-2);border-radius:var(--r-pill);background:var(--surface);color:var(--ink-2);cursor:pointer}
+.cr .bo-puce:hover{background:var(--surface-2);color:var(--ink)}
+.cr .bo-puce[aria-pressed="true"]{background:var(--amber-tint);color:var(--ink);border-color:var(--amber);box-shadow:inset 0 0 0 1px var(--amber)}
+.cr .bo-puce[aria-pressed="true"]::before{content:"✓";font-weight:700}
+/* Ligne en lecture : la souris ouvre au clic n'importe où, le clavier par le nom. */
+.bo-sources tr.bo-ligne{cursor:pointer}
+.bo-sources td{vertical-align:middle}
+.cr .bo-nom{font:inherit;font-weight:600;color:var(--ink);background:none;border:none;padding:0;text-align:left;cursor:pointer;
+  text-decoration:underline;text-decoration-color:var(--line-2);text-underline-offset:3px}
+.cr .bo-nom:hover{color:var(--brand-ink);text-decoration-color:currentColor}
+.bo-sources mark{background:var(--amber-tint);color:inherit;border-radius:var(--r-xs);box-shadow:0 0 0 1px var(--amber)}
+/* Panneau d'édition d'une source. */
+.bo-panneau{display:flex;flex-direction:column;gap:var(--space-5)}
+.bo-panneau-section{display:flex;flex-direction:column;gap:var(--space-3)}
+.bo-panneau-section + .bo-panneau-section{padding-top:var(--space-4);border-top:1px solid var(--line)}
+.bo-panneau-titre{font-size:var(--text-sm);font-weight:700;color:var(--ink-2)}
+.bo-panneau-ligne{display:flex;flex-wrap:wrap;gap:var(--space-3)}
+.bo-panneau-ligne > *{flex:1 1 10rem}
+.bo-panneau-ligne > .bo-panneau-court{flex:0 1 7rem}
+.bo-panneau-court{max-width:12rem}
+.bo-panneau .mono{font-family:var(--mono);font-size:var(--text-xs)}
+.bo-panneau-dl{display:grid;grid-template-columns:max-content 1fr;gap:var(--space-2) var(--space-4);font-size:var(--text-sm)}
+.bo-panneau-dl dt{color:var(--ink-3);font-weight:600}
+.bo-pre{white-space:pre-line}
+.bo-panneau-actions{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-3)}
+.bo-panneau-exemples{margin:var(--space-1) 0 0;padding-left:var(--space-5);list-style:disc}
+.bo-panneau-exemples li{overflow-wrap:anywhere}
+/* ---------- M3-112 : anciens style={{}} des onglets du back-office ----------
+   Valeurs reprises telles quelles ; 10px (journal) et 24px (.bo-title) n’ont
+   pas de jeton équivalent. */
+.bo-ok{color:var(--go)}
+.bo-discret{color:var(--ink-3)}
+.bo-grow{flex:1}
+.bo-nowrap{white-space:nowrap}
+.bo-actions--apres{margin-top:var(--space-3)}
+.bo-actions--suite{margin-top:10px}
+.bo-in--recherche{min-width:220px}
+/* .bo-table input impose width:100% : il faut la même portée pour reprendre la main. */
+.bo-table .bo-mdp{width:150px}
+.bo-ip{width:220px}
+.bo-motif{flex:1;min-width:200px}
+.bo-row-line--lu{opacity:.55}
+/* Sections repliables de l'onglet Dernier run (M3-112) : le titre sert de summary. */
+.bo-section > summary{display:flex;align-items:center;gap:var(--space-2);cursor:pointer;list-style:none}
+.bo-section > summary::-webkit-details-marker{display:none}
+.bo-section > summary h3{flex:1}
+.bo-section > summary:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:var(--r-xs)}
+.bo-section:not([open]) > summary h3{margin-bottom:0}

@@ -1,0 +1,47 @@
+{
+  "name": "m3_console",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Console M3 (Next.js), extraite de M3 ; le moteur (worker, migrations) reste dans M3.",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "next dev -p 4173",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "next typegen && tsc --noEmit",
+    "lint": "eslint",
+    "test": "node --test \"test/*.test.js\" && node --experimental-test-module-mocks --test \"test/wiring/*.test.js\" && node --import tsx --test \"src/**/*.test.ts\"",
+    "check": "npm run typecheck && npm run lint && npm test && npm run build"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0",
+    "next": "16.4.3",
+    "pdf-parse": "^1.1.1",
+    "pg": "^8.23.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "rss-parser": "^3.13.0",
+    "server-only": "^0.0.1",
+    "yaml": "^2.5.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/turbopack": "^4.3.3",
+    "@types/node": "^24.19.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.4.3",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "sharp@0.35.5": true,
+    "unrs-resolver@1.12.2": true
+  }
+}

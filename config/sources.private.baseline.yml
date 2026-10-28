@@ -1,0 +1,773 @@
+# BASELINE private — copie de référence figée (point de restauration). NE PAS éditer.
+sources:
+  - id: e1
+    name: ELIOR RESTAURATION FRANCE (ELIOR RESTAURATION ENSEIGNEMENT - ELIOR
+      RESTAURATION SANTE)
+    kind: private
+    category: Tourisme, culture & loisirs
+    commune: SAINT-GEORGES-DE-DIDONNE
+    type: article
+    siteUrl: https://www.eliorgroup.com/fr
+    pressUrl: https://www.eliorgroup.com/fr/medias/communiques-de-presse
+    frequency: Trimestrielle (estimée)
+    priority: B
+    method: Surveillance de la page Presse et extraction des PDF/HTML
+    active: true
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e3
+    name: CROIX ROUGE FRANCAISE (CRF)
+    kind: private
+    category: Santé, biotech & services
+    commune: LA ROCHELLE
+    type: article
+    siteUrl: https://www.croix-rouge.fr/
+    listUrl: https://www.croix-rouge.fr/actualite
+    pressUrl: https://www.croix-rouge.fr/espace-presse
+    frequency: Hebdomadaire à mensuelle (estimée)
+    priority: A
+    method: Extraction des listes HTML + suivi des communiqués/PDF
+    active: true
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e6
+    name: COMPASS GROUP FRANCE
+    kind: private
+    category: Tourisme, culture & loisirs
+    commune: SAINTES
+    type: rss
+    siteUrl: https://www.compass-group.fr/
+    listUrl: https://www.compass-group.fr/newsroom/
+    pressUrl: https://www.compass-group.fr/newsroom/
+    rssUrl: https://www.compass-group.fr/feed/
+    frequency: Hebdomadaire à mensuelle (estimée)
+    priority: A
+    method: Lecture RSS directe + dédoublonnage par URL/date
+    active: false
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e7
+    name: LIDL (LIDL)
+    kind: private
+    category: Commerce & distribution
+    commune: SAINT-JEAN-D'ANGELY
+    type: article
+    siteUrl: https://www.lidl.fr/
+    listUrl: https://www.lidl.fr/c/inscription-a-la-newsletter/s10017563
+    frequency: Mensuelle (estimée)
+    priority: A
+    method: Extraction de la rubrique Actualités + détection de nouvelles URL
+    active: false
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e10
+    name: API RESTAURATION
+    kind: private
+    category: Tourisme, culture & loisirs
+    commune: SAINT-MARTIN-DE-RE
+    type: rss
+    siteUrl: https://www.api-restauration.com/
+    listUrl: https://www.api-restauration.com/actualites/
+    rssUrl: https://www.api-restauration.com/feed/
+    frequency: Mensuelle (estimée)
+    priority: A
+    method: Lecture RSS directe + dédoublonnage par URL/date
+    active: false
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e11
+    name: SOGERES (SOGERES)
+    kind: private
+    category: Tourisme, culture & loisirs
+    commune: SAINT-CYR-DU-DORET
+    type: article
+    siteUrl: https://www.sogeres.fr/
+    listUrl: https://www.sogeres.fr/actualites/
+    frequency: Mensuelle (estimée)
+    priority: A
+    method: Extraction de la rubrique Actualités + détection de nouvelles URL
+    active: false
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e14
+    name: SODEXO ENTREPRISES
+    kind: private
+    category: Tourisme, culture & loisirs
+    commune: LA ROCHELLE
+    type: article
+    siteUrl: https://www.sodexo.fr/
+    listUrl: https://www.sodexo.fr/blog/actualites/2024/menu-animations-2026-2027-cantines-scolaires
+    frequency: Mensuelle (estimée)
+    priority: A
+    method: Extraction de la rubrique Actualités + détection de nouvelles URL
+    active: false
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e16
+    name: SODEXO SANTE MEDICO SOCIAL (SFS)
+    kind: private
+    category: Tourisme, culture & loisirs
+    commune: ROYAN
+    type: article
+    siteUrl: https://www.sodexo.fr/
+    listUrl: https://www.sodexo.fr/blog/actualites/2024/menu-animations-2026-2027-cantines-scolaires
+    frequency: Mensuelle (estimée)
+    priority: A
+    method: Extraction de la rubrique Actualités + détection de nouvelles URL
+    active: false
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e21
+    name: CARGLASS S.A.S. (CARGLASS PARE-BRISE COURBEVOIE)
+    kind: private
+    category: Commerce & distribution
+    commune: LA ROCHELLE
+    type: article
+    siteUrl: https://www.carglass.fr/
+    pressUrl: https://www.carglass.fr/a-propos-de-carglass/espace-presse
+    frequency: Trimestrielle (estimée)
+    priority: B
+    method: Surveillance de la page Presse et extraction des PDF/HTML
+    active: false
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e22
+    name: ENGIE
+    kind: private
+    category: Énergie & environnement
+    commune: LA ROCHELLE
+    type: article
+    siteUrl: https://www.engie.com/
+    listUrl: https://www.engie.com/a-propos-engie/publications/
+    frequency: Mensuelle (estimée)
+    priority: A
+    method: Extraction de la rubrique Actualités + détection de nouvelles URL
+    active: false
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e23
+    name: BASIC-FIT FRANCE (BASIC FIT FRANCE)
+    kind: private
+    category: Tourisme, culture & loisirs
+    commune: PUILBOREAU
+    type: article
+    siteUrl: https://www.basic-fit.com/fr-fr/home
+    listUrl: https://www.basic-fit.com/fr-fr/blog
+    frequency: Mensuelle (estimée)
+    priority: A
+    method: Extraction de la rubrique Actualités + détection de nouvelles URL
+    active: false
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e25
+    name: AMPLIFON FRANCE (CCAW)
+    kind: private
+    category: Commerce & distribution
+    commune: JONZAC
+    type: article
+    siteUrl: https://www.amplifon.com/fr/
+    listUrl: https://www.amplifon.com/fr/appareil-auditif/nouveaute-appareils-auditifs
+    frequency: Mensuelle (estimée)
+    priority: A
+    method: Extraction de la rubrique Actualités + détection de nouvelles URL
+    active: false
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e26
+    name: ANSAMBLE
+    kind: private
+    category: Tourisme, culture & loisirs
+    commune: PONT-L'ABBE-D'ARNOULT
+    type: article
+    siteUrl: https://www.ansamble.fr/
+    listUrl: https://www.ansamble.fr/actualites
+    frequency: Mensuelle (estimée)
+    priority: A
+    method: Extraction de la rubrique Actualités + détection de nouvelles URL
+    active: true
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e27
+    name: CHAUSSON MATERIAUX
+    kind: private
+    category: Commerce & distribution
+    commune: SAINT-PIERRE-D'OLERON
+    type: article
+    siteUrl: https://www.chausson.fr/
+    listUrl: https://www.chausson.fr/pages/catalogues/actualite
+    frequency: Mensuelle (estimée)
+    priority: A
+    method: Extraction de la rubrique Actualités + détection de nouvelles URL
+    active: true
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e30
+    name: DISTRIBUTION CASINO FRANCE (DCF)
+    kind: private
+    category: Commerce & distribution
+    commune: SAUJON
+    type: rss
+    siteUrl: https://www.groupe-casino.fr/
+    listUrl: https://www.groupe-casino.fr/actualites/
+    pressUrl: https://www.groupe-casino.fr/actualites/
+    rssUrl: https://www.groupe-casino.fr/feed/
+    frequency: Hebdomadaire à mensuelle (estimée)
+    priority: A
+    method: Lecture RSS directe + dédoublonnage par URL/date
+    active: false
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e36
+    name: APF FRANCE HANDICAP (APF)
+    kind: private
+    category: Santé, biotech & services
+    commune: LA ROCHELLE
+    type: article
+    siteUrl: https://www.apf-francehandicap.org/
+    listUrl: https://www.apf-francehandicap.org/actualites
+    pressUrl: https://www.apf-francehandicap.org/espace-presse
+    frequency: Hebdomadaire à mensuelle (estimée)
+    priority: A
+    method: Extraction des listes HTML + suivi des communiqués/PDF
+    active: true
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e37
+    name: COALLIA
+    kind: private
+    category: Santé, biotech & services
+    commune: LA ROCHELLE
+    type: article
+    siteUrl: https://coallia.org/
+    listUrl: https://coallia.org/publications/
+    frequency: Mensuelle (estimée)
+    priority: A
+    method: Extraction de la rubrique Actualités + détection de nouvelles URL
+    active: false
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e40
+    name: SOCIETE FRANCAISE DE RESTAURATION ET SERVICES (SODEXO ECOLES & UNIVERSITES
+      DEL APPRO LES PETITS GASTRONOMES SODEXO ENSEIGNEMENT SUPERIEUR) (SFRS)
+    kind: private
+    category: Tourisme, culture & loisirs
+    commune: SAINT OUEN D'AUNIS
+    type: article
+    siteUrl: https://www.sodexo.fr/
+    listUrl: https://www.sodexo.fr/blog/actualites/2024/menu-animations-2026-2027-cantines-scolaires
+    frequency: Mensuelle (estimée)
+    priority: A
+    method: Extraction de la rubrique Actualités + détection de nouvelles URL
+    active: false
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e49
+    name: GRANDVISION FRANCE
+    kind: private
+    category: Commerce & distribution
+    commune: ROCHEFORT
+    type: article
+    siteUrl: https://www.krys-group.com/
+    listUrl: https://www.krys-group.com/presse/actualites/
+    pressUrl: https://www.krys-group.com/presse/communiques-de-presse/
+    frequency: Hebdomadaire à mensuelle (estimée)
+    priority: A
+    method: Extraction des listes HTML + suivi des communiqués/PDF
+    active: true
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e52
+    name: SONEPAR FRANCE DISTRIBUTION
+    kind: private
+    category: Commerce & distribution
+    commune: PERIGNY
+    type: article
+    siteUrl: https://www.sonepar.fr/fr-fr
+    listUrl: https://www.sonepar.fr/fr-fr/static/actualites
+    frequency: Mensuelle (estimée)
+    priority: A
+    method: Extraction de la rubrique Actualités + détection de nouvelles URL
+    active: false
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e53
+    name: LOXAM
+    kind: private
+    category: Services & solutions diverses
+    commune: SAINTES
+    type: article
+    siteUrl: https://www.loxam.fr/
+    listUrl: https://www.loxam.fr/blog/catalog
+    frequency: Mensuelle (estimée)
+    priority: B
+    method: Extraction de la rubrique Actualités + détection de nouvelles URL
+    active: false
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e54
+    name: MAXI ZOO FRANCE
+    kind: private
+    category: Commerce & distribution
+    commune: ROYAN
+    type: article
+    siteUrl: https://www.maxizoo.fr/
+    listUrl: https://www.maxizoo.fr/magazine/
+    frequency: Mensuelle (estimée)
+    priority: A
+    method: Extraction de la rubrique Actualités + détection de nouvelles URL
+    active: false
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e56
+    name: EVANCIA (BABILOU)
+    kind: private
+    category: Santé, biotech & services
+    commune: MARENNES-HIERS-BROUAGE
+    type: article
+    siteUrl: https://www.babilou.fr/
+    listUrl: https://www.babilou.fr/actualites
+    frequency: Mensuelle (estimée)
+    priority: A
+    method: Extraction de la rubrique Actualités + détection de nouvelles URL
+    active: false
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e58
+    name: SAUR
+    kind: private
+    category: Énergie & environnement
+    commune: ROYAN
+    type: article
+    siteUrl: https://www.saur.com/en/
+    listUrl: https://www.saur.com/en/newsroom/
+    pressUrl: https://www.saur.com/en/newsroom/
+    frequency: Hebdomadaire à mensuelle (estimée)
+    priority: A
+    method: Extraction des listes HTML + suivi des communiqués/PDF
+    active: true
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e71
+    name: MARIONNAUD LAFAYETTE
+    kind: private
+    category: Commerce & distribution
+    commune: ROYAN
+    type: article
+    siteUrl: https://www.marionnaud.fr/
+    listUrl: https://www.marionnaud.fr/conseils-beaute
+    frequency: Mensuelle (estimée)
+    priority: A
+    method: Extraction de la rubrique Actualités + détection de nouvelles URL
+    active: false
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e74
+    name: VETIR
+    kind: private
+    category: Commerce & distribution
+    commune: VAUX-SUR-MER
+    type: article
+    siteUrl: https://www.gemo.fr/
+    listUrl: https://www.gemo.fr/sous-categorie/chaussures/actualites/baskets-de-marques-de-sport/
+    frequency: Mensuelle (estimée)
+    priority: A
+    method: Extraction de la rubrique Actualités + détection de nouvelles URL
+    active: false
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e77
+    name: FRANS BONHOMME
+    kind: private
+    category: Commerce & distribution
+    commune: PERIGNY
+    type: article
+    siteUrl: https://www.chausson.fr/
+    listUrl: https://www.chausson.fr/pages/catalogues/actualite
+    frequency: Mensuelle (estimée)
+    priority: A
+    method: Extraction de la rubrique Actualités + détection de nouvelles URL
+    active: false
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e81
+    name: DALKIA
+    kind: private
+    category: Énergie & environnement
+    commune: AYTRE
+    type: article
+    siteUrl: https://www.dalkia.fr/
+    listUrl: https://www.dalkia.fr/publications/
+    frequency: Mensuelle (estimée)
+    priority: A
+    method: Extraction de la rubrique Actualités + détection de nouvelles URL
+    active: false
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e86
+    name: JULES
+    kind: private
+    category: Commerce & distribution
+    commune: ROYAN
+    type: article
+    siteUrl: https://www.jules.com/
+    listUrl: https://www.jules.com/fr-fr/blog/
+    frequency: Mensuelle (estimée)
+    priority: A
+    method: Extraction de la rubrique Actualités + détection de nouvelles URL
+    active: false
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e91
+    name: PROMOD
+    kind: private
+    category: Commerce & distribution
+    commune: SAINT PIERRE D'OLERON
+    type: article
+    siteUrl: https://www.promod.fr/fr-fr/
+    listUrl: https://www.promod.fr/fr-fr/blog/
+    frequency: Mensuelle (estimée)
+    priority: A
+    method: Extraction de la rubrique Actualités + détection de nouvelles URL
+    active: false
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e92
+    name: SEPHORA
+    kind: private
+    category: Commerce & distribution
+    commune: LA ROCHELLE
+    type: article
+    siteUrl: https://www.sephora.fr/
+    listUrl: https://www.sephora.fr/code-assets-clp-pdp/general-conditions-publication-reviews.html
+    frequency: Mensuelle (estimée)
+    priority: A
+    method: Extraction de la rubrique Actualités + détection de nouvelles URL
+    active: false
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e94
+    name: SUEZ EAU FRANCE
+    kind: private
+    category: Énergie & environnement
+    commune: ST SAVINIEN
+    type: article
+    siteUrl: https://www.suez.com/fr
+    listUrl: https://www.suez.com/fr/actualites/communiques-de-presse
+    pressUrl: https://www.suez.com/fr/actualites/communiques-de-presse
+    frequency: Hebdomadaire à mensuelle (estimée)
+    priority: A
+    method: Extraction des listes HTML + suivi des communiqués/PDF
+    active: true
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e96
+    name: RESTALLIANCE
+    kind: private
+    category: Tourisme, culture & loisirs
+    commune: SAINT-GEORGES-DE-DIDONNE
+    type: article
+    siteUrl: https://www.restalliance.fr/
+    listUrl: https://www.restalliance.fr/restalliance/nos-actualites/
+    pressUrl: https://www.restalliance.fr/restalliance/espace-presse/
+    frequency: Hebdomadaire à mensuelle (estimée)
+    priority: A
+    method: Extraction des listes HTML + suivi des communiqués/PDF
+    active: false
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e112
+    name: EUROMASTER FRANCE
+    kind: private
+    category: Commerce & distribution
+    commune: LA ROCHELLE
+    type: article
+    siteUrl: https://www.euromaster.fr/
+    pressUrl: https://www.euromaster.fr/a-propos-d-euromaster/espace-presse
+    frequency: Trimestrielle (estimée)
+    priority: B
+    method: Surveillance de la page Presse et extraction des PDF/HTML
+    active: false
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e119
+    name: CAFPI
+    kind: private
+    category: Finance & services professionnels
+    commune: LA ROCHELLE
+    type: article
+    siteUrl: https://www.cafpi.fr/
+    listUrl: https://www.cafpi.fr/credit-immobilier/actualites
+    pressUrl: https://www.cafpi.fr/groupe-cafpi/espace-presse
+    frequency: Hebdomadaire à mensuelle (estimée)
+    priority: A
+    method: Extraction des listes HTML + suivi des communiqués/PDF
+    active: false
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e124
+    name: ETABLISSEMENT FRANCAIS DU SANG (EFS)
+    kind: private
+    category: Santé, biotech & services
+    commune: SAINTES
+    type: article
+    siteUrl: https://dondesang.efs.sante.fr/
+    listUrl: https://dondesang.efs.sante.fr/actualites
+    frequency: Mensuelle (estimée)
+    priority: A
+    method: Extraction de la rubrique Actualités + détection de nouvelles URL
+    active: true
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e128
+    name: EMEIS
+    kind: private
+    category: Santé, biotech & services
+    commune: SAINT-PALAIS-SUR-MER
+    type: article
+    siteUrl: https://www.emeis.com/fr
+    listUrl: https://www.emeis.com/fr/nous-connaitre/toutes-publications
+    pressUrl: https://www.emeis.com/fr/presse/communiques-presse
+    frequency: Hebdomadaire à mensuelle (estimée)
+    priority: A
+    method: Extraction des listes HTML + suivi des communiqués/PDF
+    active: false
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e135
+    name: RESTORIA
+    kind: private
+    category: Tourisme, culture & loisirs
+    commune: LOULAY
+    type: article
+    siteUrl: https://www.restoria.fr/
+    listUrl: https://www.restoria.fr/actualites/
+    frequency: Mensuelle (estimée)
+    priority: A
+    method: Extraction de la rubrique Actualités + détection de nouvelles URL
+    active: false
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e136
+    name: BUT INTERNATIONAL
+    kind: private
+    category: Commerce & distribution
+    commune: ROCHEFORT
+    type: article
+    siteUrl: https://www.but.fr/
+    listUrl: https://www.but.fr/actualites/les-catalogues-but?xtatc=CATALOGUE|2026-07-28|BLOC_SERVICE
+    frequency: Mensuelle (estimée)
+    priority: A
+    method: Extraction de la rubrique Actualités + détection de nouvelles URL
+    active: false
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e141
+    name: AUTOROUTES DU SUD DE LA FRANCE (ASF)
+    kind: private
+    category: Transport & logistique
+    commune: SAINTES
+    type: article
+    siteUrl: https://www.vinci-autoroutes.com/fr/
+    listUrl: https://www.vinci-autoroutes.com/fr/actualites/
+    pressUrl: https://www.vinci-autoroutes.com/fr/presse/
+    frequency: Hebdomadaire à mensuelle (estimée)
+    priority: A
+    method: Extraction des listes HTML + suivi des communiqués/PDF
+    active: true
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e142
+    name: ASSOCIATION NATIONALE DE PREVENTION EN ALCOOLOGIE ET ADDICTOLOGIE (ANPAA)
+    kind: private
+    category: Santé, biotech & services
+    commune: LA ROCHELLE
+    type: article
+    siteUrl: https://addictions-france.org/
+    listUrl: https://addictions-france.org/ressources/
+    pressUrl: https://addictions-france.org/presse/
+    frequency: Hebdomadaire à mensuelle (estimée)
+    priority: A
+    method: Extraction des listes HTML + suivi des communiqués/PDF
+    active: false
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e145
+    name: DUPONT RESTAURATION
+    kind: private
+    category: Tourisme, culture & loisirs
+    commune: BOIS
+    type: rss
+    siteUrl: https://www.dupont-restauration.fr/
+    listUrl: https://www.dupont-restauration.fr/blog/
+    rssUrl: https://www.dupont-restauration.fr/feed/
+    frequency: Mensuelle (estimée)
+    priority: A
+    method: Lecture RSS directe + dédoublonnage par URL/date
+    active: false
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e149
+    name: BUFFALO GRILL
+    kind: private
+    category: Tourisme, culture & loisirs
+    commune: ANGOULINS
+    type: article
+    siteUrl: https://www.buffalo-grill.fr/
+    listUrl: https://www.buffalo-grill.fr/nos-actualites
+    frequency: Mensuelle (estimée)
+    priority: A
+    method: Extraction de la rubrique Actualités + détection de nouvelles URL
+    active: false
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e151
+    name: RTE RESEAU DE TRANSPORT D ELECTRICITE
+    kind: private
+    category: Énergie & environnement
+    commune: PUILBOREAU
+    type: article
+    siteUrl: https://www.rte-france.com/
+    listUrl: https://www.rte-france.com/presse
+    pressUrl: https://www.rte-france.com/presse
+    frequency: Hebdomadaire à mensuelle (estimée)
+    priority: A
+    method: Extraction des listes HTML + suivi des communiqués/PDF
+    active: true
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e157
+    name: VITALLIANCE (VITALLIANCE)
+    kind: private
+    category: Santé, biotech & services
+    commune: AYTRE
+    type: article
+    siteUrl: https://www.vitalliance.fr/
+    listUrl: https://www.vitalliance.fr/blog
+    frequency: Mensuelle (estimée)
+    priority: A
+    method: Extraction de la rubrique Actualités + détection de nouvelles URL
+    active: false
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e163
+    name: ELIOR RESTAURATION HOTELLERIE DE SANTE (ERHS)
+    kind: private
+    category: Tourisme, culture & loisirs
+    commune: ROYAN
+    type: article
+    siteUrl: https://www.eliorgroup.com/fr
+    pressUrl: https://www.eliorgroup.com/fr/medias/communiques-de-presse
+    frequency: Trimestrielle (estimée)
+    priority: B
+    method: Surveillance de la page Presse et extraction des PDF/HTML
+    active: false
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: e183
+    name: COOP ATLANTIQUE (COOP)
+    kind: private
+    category: Commerce & distribution
+    commune: SAINTES
+    type: article
+    siteUrl: https://www.coop-atlantique.fr/
+    listUrl: https://www.coop-atlantique.fr/une-entreprise-de-distribution-differente/notre-cooperative/notre-actualite/
+    frequency: Mensuelle (estimée)
+    priority: A
+    method: Extraction de la rubrique Actualités + détection de nouvelles URL
+    active: false
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}

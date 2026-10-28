@@ -1,0 +1,300 @@
+/* Ordre des couches, déclaré ICI parce que base.css est chargé avant globals.css
+   (src/app/layout.tsx) : la première déclaration fixe l'ordre. Une règle hors
+   couche bat toujours une règle en couche ; la remise à zéro va donc dans « base »,
+   sous les utilitaires Tailwind (« utilities »), faute de quoi p-2, mt-3… restent
+   sans effet face à `*{margin:0;padding:0}` (constaté sur M3-109). */
+@layer theme, base, utilities;
+
+/* M3 — base : reset, jetons de couleur, typographie, éléments de formulaire.
+   Repris de console-redaction-editable.html (bloc <style> d'origine). */
+
+/* Inter, servie depuis le dépôt et jamais depuis un CDN : la page doit s'afficher
+   identiquement sans accès à Internet, et une requête vers Google à chaque
+   chargement envoie l'IP de chaque relecteur à un tiers pour rien. Fichier
+   variable unique (400→700), deux sous-ensembles, 130 Ko au total.
+   Choix repris de lp-formalites, qui l'auto-héberge aussi — les deux applications
+   maison parlent la même langue typographique. Le CORPS DES ARTICLES reste en
+   Georgia : voir --serif plus bas, c'est un texte à lire, pas une interface. */
+@font-face{
+  font-family:'Inter';font-style:normal;font-weight:400 700;font-display:swap;
+  src:url('/fonts/inter-latin.woff2') format('woff2');
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,
+    U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face{
+  font-family:'Inter';font-style:normal;font-weight:400 700;font-display:swap;
+  src:url('/fonts/inter-latin-ext.woff2') format('woff2');
+  unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,
+    U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,
+    U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+
+@layer base{
+  *{box-sizing:border-box;margin:0;padding:0}
+}
+html,body{height:100%}
+
+.cr{
+  /* Fond blanc lavande repris de lp-formalites. Conséquence à assumer : il n'est
+     plus qu'à 1,05:1 de --surface, donc une carte ne se détache plus par son
+     fond. Ce sont le filet et l'ombre qui portent la séparation — d'où --line
+     légèrement assombri, sans quoi les bords disparaissent. L'accent reste le
+     navy de M3 : on aligne les formes, pas l'identité. */
+  --bg:#F9F9FF; --surface:#FFFFFF; --surface-2:#F4F5FA; --surface-3:#ECEDF5;
+  /* --ink-3 porte des libellés de 11,5 à 12 px. À #8A909C il ne faisait que
+     3,2:1 sur blanc — sous le seuil AA de 4,5:1, et 38 textes en dépendaient.
+     #68707D : 5,0:1 sur blanc, 4,6:1 sur --surface-2. */
+  /* #636A77 et non #68707D : sur --surface-3 (le fond des étiquettes neutres,
+     .cr-oltag) l'ancien ne faisait que 4,28:1. Il tient maintenant 4,66 là,
+     5,44 sur blanc et 5,19 sur le fond de page. */
+  --ink:#15181E; --ink-2:#535A67; --ink-3:#636A77;
+  /* 1,40:1 contre le fond lavande, contre 1,29 au cran précédent et 1,15 avec
+     l'ancien #E1E4E9 — sur un fond presque blanc, c'est le filet qui dessine la
+     carte, plus son fond. lp-formalites est à ~1,5 avec un gris plus violet. */
+  --line:#D3D6E2; --line-2:#B8BDCE;
+  --brand:#22417B; --brand-tint:#EAF0FB; --brand-ink:#1B335F; --on-brand:#FFFFFF;
+  /* L'ambre était la seule paire sémantique sous le seuil : #B67A18 ne faisait
+     que 3,63:1 sur blanc et 3,21 sur sa propre teinte — or il porte les
+     avertissements, soit exactement ce qu'il ne faut pas rater. #92600F tient
+     5,38 sur blanc, 4,94 sur --surface-2 et 4,76 sur --amber-tint. Le vert et le
+     rouge passaient déjà (4,58 et 4,71), ils ne bougent pas. */
+  --amber:#92600F; --amber-tint:#FAF0DC;
+  --go:#1B7A50; --go-tint:#E4F1EA;
+  --stop:#B54334; --stop-tint:#FAEAE7;
+  /* Texte posé sur un aplat --go / --amber / --stop (pastilles, bouton Publier).
+     Blanc en clair : 5,3 / 5,4 / 4,7:1. */
+  --on-go:#FFFFFF; --on-amber:#FFFFFF; --on-stop:#FFFFFF;
+  /* Georgia en tête, et non plus Iowan Old Style : Iowan n'existe que sur macOS,
+     donc sous Windows la pile tombait sur Palatino Linotype — une police
+     d'imprimerie de 1950, à déliés fins et petite hauteur d'x. Mesuré au canvas à
+     15,5 px : hauteur d'x de 7,0 px pour Palatino contre 8,0 px pour Georgia, soit
+     14 % de lettre en moins à taille nominale égale, avec des traits qui se
+     délavent à l'antialiasing. Georgia est dessinée en 1996 POUR l'écran, et elle
+     est installée sur Windows comme sur macOS.
+     Contrepartie : ses chiffres sont elzeviriens, de hauteurs inégales. Tout ce
+     qui affiche des nombres à lire d'un coup d'œil est donc passé à --sans en
+     chiffres tabulaires (.cr-kpi .n, .cr-rank-inp, .sv-tile .n). */
+  --serif:Georgia,Cambria,'Times New Roman',serif;
+  --sans:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,'SF Mono','Roboto Mono',Menlo,Consolas,monospace;
+  /* Rayons et ombre alignés sur lp-formalites : 6 px pour les contrôles, 8 pour
+     les blocs, et UNE seule ombre, à peine perceptible. Les ombres portées
+     longues qu'on avait (jusqu'à 0 24px 60px -32px) étaient décoratives — elles
+     ne disaient ni élévation ni état, elles faisaient joli. */
+  --r-xs:4px; --r-sm:6px; --r:8px; --r-lg:12px; --r-pill:999px;
+  /* Échelles (M3-106). Contrat partagé avec les composants (src/composants) et
+     avec Tailwind (src/app/globals.css) : ne pas renommer.
+     Texte : les huit corps les plus employés dans styles/*.css au moment du
+     passage aux jetons (12 px ×90, 14 px ×40, puis 11/13/15/15,5/16,5/20 px).
+     Les corps de titre plus rares (19, 22 à 31 px, 3em) restent en px là où ils
+     sont : une échelle n'a pas à absorber chaque titre unique. */
+  --text-2xs:11px; --text-xs:12px; --text-sm:13px; --text-base:14px;
+  --text-md:15px; --text-lg:15.5px; --text-xl:16.5px; --text-2xl:20px;
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
+  --space-5:20px; --space-6:24px; --space-8:32px;
+  /* Statuts et rubriques (shared/model.js ne garde que le nom du jeton). Valeurs
+     claires = les hex historiques de model.js, inchangés. Brouillon (3,2:1 sur
+     blanc) et Publié (3,6:1) ne servent qu'à des pastilles, pas à du texte :
+     le seuil graphique de 3:1 s'applique, ils le tiennent. */
+  --status-brouillon:#8A909C; --status-a_revoir:#22417B; --status-signale:#B54334;
+  --status-valide:#1B7A50; --status-publie:#26986D; --status-archive:#535A67;
+  --rub-economie:#22417B; --rub-economie-tint:#EAF0FB;
+  --rub-culture:#9A5A24; --rub-culture-tint:#F7ECDF;
+  --rub-environnement:#1F6E4E; --rub-environnement-tint:#E4F1EA;
+  --rub-societe:#5E4392; --rub-societe-tint:#EEE9F7;
+  --rub-sport:#A2374F; --rub-sport-tint:#F8E7EB;
+  --shadow:0 4px 8px rgba(20,27,43,.05);
+  /* Pour ce qui flotte réellement au-dessus du contenu — modale, toast, barre
+     d'actions collante. Deux ombres au total dans toute l'application. */
+  --shadow-pop:0 8px 24px -8px rgba(20,27,43,.18);
+  --cc:var(--brand); --cc-tint:var(--brand-tint);
+  font-family:var(--sans); color:var(--ink);
+  /* Fond plat. Les deux dégradés radiaux et le grain en .cr::before (un SVG
+     feTurbulence plein écran, repeint à chaque redimensionnement) coûtaient un
+     décor que personne ne regarde dans un outil ouvert huit heures par jour. */
+  background:var(--bg);
+  /* Pas de -webkit-font-smoothing:antialiased : sans effet sous Windows, et sur
+     macOS il AMINCIT le texte au lieu de l'affiner — l'inverse de ce qu'on veut
+     pour un écran qu'on lit des heures. */
+  min-height:100vh; position:relative; line-height:1.5;
+}
+
+.cr button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+.cr input,.cr textarea,.cr select{font-family:inherit;color:inherit}
+.cr :focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:var(--r-xs)}
+.cr a{color:inherit}
+
+/* ---------- colonne de navigation ---------- */
+/* Partagée par la console et le back-office : les deux écrans de la même
+   application se naviguent de la même façon. Elle remplace les barres d'onglets
+   horizontales (.cr-toolbar, .bo-tabs), qui repoussaient le reste de l'en-tête à
+   l'opposé du sens de lecture.
+
+   L'état de BASE est le rail en icônes, et non la colonne déployée : la colonne
+   reste verticale à toutes les largeurs, elle ne se couche jamais en bandeau.
+   Le déploiement est la condition particulière — il demande de la place ET que
+   l'utilisateur n'ait pas replié. Écrit dans ce sens, chaque règle n'existe qu'une
+   fois ; dans l'autre sens, il fallait poser l'état déployé puis le défaire règle
+   par règle à deux endroits.
+
+   Replié, les libellés passent en infobulle : le rendu pose un `title` sur chaque
+   entrée, seul recours quand le texte n'est plus là. La préférence vit dans
+   state.prefs.navFolded (localStorage) — une navigation qui se redéploie toute
+   seule au rechargement ne sert à rien. */
+/* minmax(0,1fr) et non 1fr : `1fr` vaut `minmax(auto,1fr)`, et ce minimum `auto`
+   empêche la PISTE de descendre sous la largeur de son contenu. Avec un simple
+   `1fr`, un tableau large (back-office, onglet Sources) élargissait toute la
+   coque au lieu de défiler dans son .bo-scroll, et c'est la page entière qui
+   partait de travers. Le min-width:0 sur les enfants traite l'autre moitié du
+   problème : la piste peut rétrécir, encore faut-il que l'élément l'accepte. */
+.cr-app{display:grid;grid-template-columns:58px minmax(0,1fr);align-items:start;min-height:100vh}
+.cr-app > *{min-width:0}
+.cr-side{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;gap:var(--space-5);
+  padding:18px 8px;background:var(--surface);border-right:1px solid var(--line);
+  overflow:auto;z-index:3}
+.cr-side-id{padding:2px 0 0;display:flex;align-items:center;justify-content:center;gap:7px}
+.cr-side-mark{display:none;font-family:var(--serif);font-size:19px;font-weight:600;
+  letter-spacing:-.015em;align-items:baseline;gap:7px;margin-right:auto}
+.cr-side-mark span{font-family:var(--sans);font-size:var(--text-xs);font-weight:500;color:var(--ink-3);letter-spacing:0}
+/* Sous le point de bascule il n'y a pas de choix à offrir : le rail est en icônes. */
+.cr-fold{display:none;place-items:center;width:28px;height:28px;border-radius:var(--r-sm);
+  color:var(--ink-3);flex:0 0 auto;transition:background .12s,color .12s}
+.cr-fold:hover{background:var(--surface-2);color:var(--ink)}
+.cr-side-g{display:flex;flex-direction:column;gap:2px}
+.cr-side-foot{margin-top:auto;display:flex;flex-direction:column;gap:7px;
+  padding-top:14px;border-top:1px solid var(--line)}
+.cr-side-me{display:none;padding:0 10px;align-items:center;gap:var(--space-1);flex-wrap:wrap}
+
+.cr-navrow{width:100%;position:relative;display:flex;align-items:center;justify-content:center;
+  gap:9px;padding:9px 0;border-radius:var(--r-sm);font-size:var(--text-base);font-weight:500;color:var(--ink-2);
+  text-align:left;transition:background .12s,color .12s}
+.cr-navrow:hover{background:var(--surface-2);color:var(--ink)}
+.cr-navrow.on{background:var(--brand-tint);color:var(--brand-ink);font-weight:600}
+.cr-navrow-l{display:none}
+/* Sur l'icône seule, la pastille se pose dessus : son margin-left:auto la
+   pousserait hors du rail. */
+.cr-navrow .b{position:absolute;top:1px;right:3px;font-family:var(--mono);font-size:var(--text-xs);
+  background:var(--stop);color:var(--on-stop);border-radius:var(--r-pill);padding:0 var(--space-1)}
+/* Repli du LLM : affiché seulement quand il a lieu, jamais en permanence. */
+.cr-llm-warn{display:flex;align-items:flex-start;justify-content:center;gap:7px;margin:0;
+  padding:9px 0;background:var(--amber-tint);color:var(--amber);border-radius:var(--r-sm);
+  font-size:var(--text-xs);font-weight:600;line-height:1.35}
+
+/* ---------- colonne déployée : assez de place, et non repliée ---------- */
+@media (min-width:1121px){
+  .cr-fold{display:grid}
+  .cr-app:not(.folded){grid-template-columns:212px minmax(0,1fr)}
+  .cr-app:not(.folded) .cr-side{padding:18px 12px}
+  .cr-app:not(.folded) .cr-side-id{padding:2px 6px 0 10px;justify-content:flex-start}
+  .cr-app:not(.folded) .cr-side-mark{display:flex}
+  .cr-app:not(.folded) .cr-navrow{position:static;justify-content:flex-start;padding:8px 10px}
+  .cr-app:not(.folded) .cr-navrow-l{display:inline}
+  .cr-app:not(.folded) .cr-navrow .b{position:static;margin-left:auto;font-size:var(--text-xs);padding:1px 6px}
+  .cr-app:not(.folded) .cr-side-me{display:flex}
+  .cr-app:not(.folded) .cr-llm-warn{justify-content:flex-start;margin:0 2px;padding:8px 9px}
+}
+
+/* width:100% indispensable depuis que la coque est un élément de grille : avec
+   des marges horizontales AUTOMATIQUES, un élément de grille n'est plus étiré à
+   sa piste, il est dimensionné à son contenu puis centré. Le `margin:0 auto` qui
+   centrait la coque dans le flux normal la faisait donc enfler jusqu'à sa
+   largeur de contenu — et c'est la page entière qui défilait de travers. */
+/* 1760 et non 1320 : le plafond laissait 373 px de marge vide sur un écran de
+   1920 pendant que le panneau de contrôle, où vivent les preuves, était tassé
+   dans 372 px. Le plafond ne protégeait pas la LECTURE — c'est .cr-prose qui
+   borne la longueur de ligne, et lui seul — il bornait toute la page, preuves
+   comprises. Même correction que pour .bo-shell au back-office. */
+.cr-shell{width:100%;max-width:1760px;margin:0 auto;padding:24px 22px 120px;position:relative;z-index:1}
+
+/* champs éditables inline */
+[contenteditable]{outline:none;border-radius:var(--r-sm);transition:background .15s,box-shadow .15s;cursor:text}
+[contenteditable]:hover{background:rgba(34,65,123,.045);box-shadow:inset 0 0 0 1px var(--line-2)}
+/* --surface et non #fff : en sombre le texte herite de --ink (#EDEFF3), qui
+   sur du blanc ne fait que 1,15:1 — invisible pendant qu'on le tape. */
+[contenteditable]:focus{background:var(--surface);box-shadow:0 0 0 1px var(--brand),0 0 0 4px var(--brand-tint)}
+[contenteditable]:empty:before{content:attr(data-ph);color:var(--ink-3)}
+
+/* Le toast est en négatif : fond --ink, texte --surface. Les deux s'inversent
+   en sombre ; le #fff d'avant y donnait du blanc sur fond clair. Les icônes
+   prennent les teintes sémantiques, pâles en clair et foncées en sombre, donc
+   toujours à l'opposé du fond. */
+.cr-toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);z-index:60;background:var(--ink);color:var(--surface);
+  padding:12px 18px;border-radius:var(--r);display:flex;align-items:center;gap:10px;font-size:var(--text-base);font-weight:500;
+  box-shadow:var(--shadow-pop);animation:toast .3s ease}
+.cr-toast .ic{color:var(--go-tint);display:grid;place-items:center;line-height:0}
+.cr-toast.err .ic{color:var(--stop-tint)}
+@keyframes toast{from{opacity:0;transform:translate(-50%,14px)}to{opacity:1;transform:translate(-50%,0)}}
+
+/* modale générique */
+.m3-modal{position:fixed;inset:0;z-index:70;display:grid;place-items:center;background:rgba(20,26,40,.44);animation:fade .2s ease}
+.m3-modal-card{background:var(--surface);border-radius:var(--r);max-width:560px;width:calc(100% - 40px);max-height:86vh;overflow:auto;
+  box-shadow:var(--shadow-pop);padding:22px 24px}
+.m3-modal-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-4)}
+.m3-modal-h h3{font-family:var(--serif);font-size:var(--text-2xl);font-weight:600}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+
+/* Touches. Sans règle, <kbd> rend dans la monospace du navigateur, plus petite
+   que le texte autour : la touche se lit moins bien que sa description. Le filet
+   épaissi en bas suffit à évoquer le relief, sans ombre — il y en a deux dans
+   toute l'application et aucune n'est là pour ça. */
+.cr kbd{font-family:var(--mono);font-size:var(--text-xs);font-weight:600;line-height:1;
+  color:var(--ink-2);background:var(--surface-2);border:1px solid var(--line-2);
+  border-bottom-width:2px;border-radius:var(--r-sm);padding:3px 6px;white-space:nowrap}
+.kb-list{display:grid;grid-template-columns:auto 1fr;gap:10px 14px;align-items:baseline}
+.kb-list dt{text-align:right}
+.kb-list dd{margin:0;font-size:var(--text-base);color:var(--ink)}
+/* Une touche inactive reste lisible mais cesse d'annoncer qu'elle agit. */
+.cr kbd.kb-mort{opacity:.45;text-decoration:line-through}
+.kb-off{font-size:var(--text-xs);color:var(--ink-3);margin-left:var(--space-2)}
+
+/* Réglage des touches. Le bouton EST la touche : on clique dessus, il passe en
+   attente, la frappe suivante le remplace. */
+.kb-edit{display:flex;flex-direction:column;gap:2px}
+.kb-row{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:var(--r-sm)}
+.kb-row:hover{background:var(--surface-2)}
+.kb-row.kb-borne{opacity:.6}
+.kb-lab{flex:1;font-size:var(--text-base)}
+.kb-cb{display:flex;align-items:center}
+.kb-key{font-family:var(--mono);font-size:var(--text-xs);font-weight:600;color:var(--ink-2);
+  background:var(--surface-2);border:1px solid var(--line-2);border-bottom-width:2px;
+  border-radius:var(--r-sm);padding:4px 9px;min-width:62px;text-align:center}
+.kb-key:hover{border-color:var(--brand);color:var(--ink)}
+.kb-key.kb-attente{border-color:var(--brand);background:var(--brand-tint);color:var(--brand-ink)}
+.kb-msg{font-size:var(--text-xs);color:var(--ink-2);min-height:16px;margin-top:6px}
+
+/* mode sombre (préférence FEAT) */
+[data-theme="dark"] .cr{
+  --bg:#12151B; --surface:#1B1F27; --surface-2:#20242E; --surface-3:#262B36;
+  /* Même correction qu'en clair : #7C8593 ne faisait que 4,4:1 sur --surface. */
+  --ink:#EDEFF3; --ink-2:#AEB6C2; --ink-3:#8A94A3;
+  --line:#2C313C; --line-2:#3A4150;
+  /* --on-brand vire au sombre : #fff sur ce bleu clair ne fait que 2,99:1. */
+  --brand:#6E97D8; --brand-tint:#1E2A40; --brand-ink:#BAD0F2; --on-brand:#12151B;
+  --amber:#D9A44B; --amber-tint:#332912;
+  --go:#4FB588; --go-tint:#12291F;
+  --stop:#D9776A; --stop-tint:#331E1A;
+  /* Les aplats s’éclaircissent en sombre : le blanc n’y tiendrait plus, d’où le fond de page. */
+  --on-go:#12151B; --on-amber:#12151B; --on-stop:#12151B;
+  /* Statuts et rubriques en sombre (M3-106). Avant, model.js posait les hex
+     clairs en style inline, identiques dans les deux thèmes : #22417B sur
+     --surface sombre ne faisait que 1,7:1. Contrastes mesurés (WCAG) sur
+     --surface #1B1F27 / --surface-3 #262B36 :
+     brouillon 5,38/4,62 · à revoir 5,57/4,78 · signalé 5,34/4,59 · validé 6,52/5,60
+     · publié 8,08/6,94 · archivé 8,07/6,93. Rubriques, couleur sur --surface puis
+     sur sa propre teinte : économie 5,57/4,85 · culture 6,81/6,04 ·
+     environnement 6,62/6,18 · société 6,14/5,69 · sport 6,01/5,53.
+     Économie, à revoir, signalé et validé reprennent --brand, --stop et --go. */
+  --status-brouillon:#8A94A3; --status-a_revoir:#6E97D8; --status-signale:#D9776A;
+  --status-valide:#4FB588; --status-publie:#5CC99A; --status-archive:#AEB6C2;
+  --rub-economie:#6E97D8; --rub-economie-tint:#1E2A40;
+  --rub-culture:#D69A62; --rub-culture-tint:#33261A;
+  --rub-environnement:#5BB58A; --rub-environnement-tint:#12291F;
+  --rub-societe:#A893D6; --rub-societe-tint:#29213A;
+  --rub-sport:#E07F95; --rub-sport-tint:#3A1D25;
+  background:var(--bg);
+}
+/* .cr-hero et .cr-ctrl sont passés aux jetons en clair comme en sombre : les deux
+   dégradés d'origine allaient d'une couleur à sa quasi-jumelle, invisibles à l'œil
+   et coûteux au repaint. Plus de surcharge sombre à maintenir ici. */
+
+@media (prefers-reduced-motion:reduce){.cr *{animation:none!important;transition:none!important}}

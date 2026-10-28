@@ -1,0 +1,616 @@
+/* M3 — console de rédaction. Repris de console-redaction-editable.html + écrans ajoutés. */
+
+/* La colonne de navigation (.cr-app, .cr-side, .cr-navrow…) vit dans base.css :
+   le back-office la partage, et admin.html ne charge pas cette feuille-ci. */
+
+/* ---------- en-tête ---------- */
+.cr-top{display:flex;align-items:flex-end;gap:22px;
+  padding-bottom:18px;margin-bottom:22px;border-bottom:1px solid var(--line-2);flex-wrap:wrap}
+.cr-top-id{flex:0 0 auto}
+.cr-title{font-family:var(--serif);font-size:27px;font-weight:600;line-height:1.05;letter-spacing:-.015em}
+/* Majuscule sur la PREMIÈRE lettre seulement, et non `capitalize`, qui en met une
+   à chaque mot : la ligne se lisait « Lundi 12 Octobre · Bonne Relecture ». Le
+   français ne capitalise ni les mois ni les mots d'une phrase. La règle n'était
+   là que pour relever le « lundi » rendu en minuscules par toLocaleDateString. */
+.cr-date{font-size:var(--text-base);color:var(--ink-2);margin-top:1px}
+.cr-date::first-letter{text-transform:uppercase}
+.cr-tab{font-size:var(--text-base);font-weight:600;color:var(--ink-2);background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r-sm);padding:7px 12px;display:flex;align-items:center;gap:6px;transition:.15s}
+.cr-tab:hover{border-color:var(--line-2);color:var(--ink)}
+.cr-tab.on{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
+.cr-tab .b{font-family:var(--mono);font-size:var(--text-xs);background:var(--stop);color:var(--on-stop);border-radius:var(--r-pill);padding:1px 6px}
+.cr-who{font-size:var(--text-base);font-weight:600;color:var(--ink-2);padding:7px 2px 7px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px}
+.cr-as{font-size:var(--text-xs);font-weight:500;color:var(--ink-3);padding:0 6px}
+.cr-role{font-size:var(--text-base);font-weight:600;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:7px 10px;cursor:pointer}
+/* Tuiles de compteur calées sur le tableau de bord de lp-formalites : le nombre
+   domine à 30 px / 700, le libellé passe dessous en 12 px, la tuile respire à
+   16/20. Sur un écran dont tout le rôle est de dire « combien il reste », 21 px
+   ne portaient pas — c'est la mesure, pas le goût, qui tranche.
+   Le filet reste à 1 px. Eux réservent 2 px transparents pour qu'une tuile puisse
+   passer en alerte sans décaler la ligne ; on obtient la même propriété en ne
+   changeant que la COULEUR du filet, sans toucher à sa largeur. */
+.cr-counts{display:flex;gap:var(--space-3);flex-wrap:wrap}
+.cr-kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  padding:var(--space-4) var(--space-5);min-width:128px;box-shadow:var(--shadow)}
+/* Chiffres tabulaires en --sans : ceux de Georgia sont elzeviriens, de hauteurs
+   inégales, et quatre KPI côte à côte ne se comparent plus d'un coup d'œil. */
+.cr-kpi .n.n--stop{color:var(--stop)}
+.cr-kpi .n.n--go{color:var(--go)}
+.cr-kpi .n{font-family:var(--sans);font-variant-numeric:tabular-nums;font-size:30px;font-weight:700;line-height:1.05;letter-spacing:-.02em}
+.cr-kpi .l{font-size:var(--text-xs);color:var(--ink-2);margin-top:6px;display:flex;align-items:center;gap:5px}
+/* Rejetée à droite : les KPI suivent le titre, la légende ferme la ligne. */
+.cr-legend{display:flex;gap:var(--space-3);flex-wrap:wrap;font-size:var(--text-xs);color:var(--ink-2);margin-left:auto}
+.cr-legend span{display:flex;align-items:center;gap:5px}
+/* La pastille de statut n'avait aucune regle : la coque ecrit un <i> vide dont
+   la couleur vient de STATUSES[k].color en style inline, et un <i> vide sans
+   dimension mesure 0 x 0. Les six pastilles de la legende etaient invisibles. */
+.cr-dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto;background:var(--dot)}
+
+/* ---------- relecture : file · article · détail (M3-107, axe C2) ----------
+   Seuils = SEUILS_TIROIR du socle (Tiroir.logique.ts), repris par
+   disposition.logique.ts : sous 1000 px une seule colonne (file et détail en
+   tiroir) ; de 1000 à 1400 px, la file en colonne étroite ; au-delà, trois
+   colonnes. Le script choisit ce qu'il rend ; les règles « max-width » masquent
+   d'ici là, au rendu serveur, les colonnes qui n'ont pas leur place.
+   Largeurs de colonne : une mise en page, pas un jeton du thème — d'où des
+   variables locales, au seul endroit. */
+.cr-grid{--cr-col-file:minmax(15rem,17.5rem);--cr-col-detail:minmax(20rem,27rem);
+  display:grid;grid-template-columns:minmax(0,1fr);gap:var(--space-5);align-items:start}
+@media (min-width:1000px){
+  .cr-grid--file-colonne{grid-template-columns:var(--cr-col-file) minmax(0,1fr)}
+}
+@media (min-width:1401px){
+  .cr-grid--file-colonne.cr-grid--detail-colonne{grid-template-columns:var(--cr-col-file) minmax(0,1fr) var(--cr-col-detail)}
+}
+@media (max-width:999.98px){ .cr-grid > .cr-col-file{display:none} }
+@media (max-width:1400.98px){ .cr-grid > .cr-col-detail{display:none} }
+.cr-col-article{min-width:0}
+/* Le détail en colonne défile seul, à côté de l'article : la conformité reste à
+   l'écran pendant qu'on lit. */
+.cr-col-detail{position:sticky;top:var(--space-4);max-height:calc(100vh - 2 * var(--space-4));overflow:auto;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
+/* Dans le tiroir, le corps du Tiroir porte déjà la marge et le fond. */
+.cr-tiroir-detail .cr-ctrl{padding:0;background:none}
+.cr-col-detail .cr-ctrl{background:none}
+.cr-detail-sec{scroll-margin-top:var(--space-4)}
+/* Barre d'outils au-dessus de l'article quand la file est en tiroir. */
+.cr-outils{display:flex;align-items:center;gap:var(--space-2);margin-bottom:var(--space-3)}
+.cr-outils-n{font-family:var(--mono);font-size:var(--text-xs);color:var(--ink-2);background:var(--surface-3);
+  border-radius:var(--r-pill);padding:0 var(--space-2)}
+
+.cr-rail-head{display:flex;align-items:center;justify-content:space-between;padding:0 4px 10px}
+/* --ink-2 et non --ink-3 : ce titre est posé sur --bg, plus sombre que --surface,
+   où --ink-3 ne fait que 4,1:1. */
+.cr-rail-title{font-size:var(--text-xs);color:var(--ink-2);font-weight:600}
+
+.cr-zone-tabs{display:flex;gap:var(--space-2);margin:0 2px 10px}
+.cr-ztab{flex:1;display:flex;align-items:center;justify-content:center;gap:7px;font-size:var(--text-base);font-weight:600;
+  color:var(--ink-2);background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:9px 8px;transition:.15s;line-height:1;text-align:center}
+.cr-ztab:hover{border-color:var(--line-2);color:var(--ink)}
+.cr-ztab .n{font-family:var(--mono);font-size:var(--text-xs);background:var(--surface-3);color:var(--ink-2);padding:2px 6px;border-radius:var(--r-pill);font-weight:600}
+.cr-ztab.on.hab{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
+/* Le badge est composite par-dessus le fond --brand du parent : meme jeton. */
+.cr-ztab.on.hab .n{background:rgba(255,255,255,.22);color:var(--on-brand)}
+.cr-ztab.on.nonhab{background:var(--amber);border-color:var(--amber);color:var(--on-amber)}
+.cr-ztab.on.nonhab .n{background:color-mix(in srgb,var(--on-amber) 26%,transparent);color:var(--on-amber)}
+.cr-kind-tabs{display:flex;gap:6px;margin:0 2px 12px}
+.cr-kind{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;font-size:var(--text-xs);font-weight:600;
+  color:var(--ink-2);background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:6px 6px;transition:.15s;line-height:1}
+.cr-kind:hover{border-color:var(--line-2);color:var(--ink)}
+.cr-kind.on{background:var(--ink);border-color:var(--ink);color:var(--surface)}
+.cr-kind .n{font-family:var(--mono);font-size:var(--text-xs);opacity:.65}
+.cr-kind.on .n{opacity:.85}
+
+.cr-zones{display:flex;flex-wrap:wrap;gap:6px;margin:0 2px 14px}
+.cr-zones.nonhab .cr-zone-pill.on{background:var(--amber);border-color:var(--amber)}
+.cr-zone-pill{display:flex;align-items:center;gap:5px;font-size:var(--text-xs);font-weight:500;color:var(--ink-2);
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-pill);padding:5px 11px 5px 9px;transition:.15s;line-height:1}
+.cr-zone-pill:hover{border-color:var(--line-2);color:var(--ink)}
+.cr-zone-pill.on{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
+.cr-zone-pill .n{font-family:var(--mono);font-size:var(--text-xs);opacity:.7}
+.cr-zone-pill.on .n{opacity:.85}
+
+.cr-src-filter{margin:0 2px 12px}
+.cr-src-filter select{width:100%;font-size:var(--text-xs);background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:8px 10px;cursor:pointer;color:var(--ink-2);font-weight:500}
+.cr-src-filter select:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-tint)}
+
+.cr-rail{display:flex;flex-direction:column;gap:11px}
+.cr-card{text-align:left;width:100%;background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r);padding:14px 15px;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;
+  position:relative;overflow:hidden}
+.cr-card:hover{border-color:var(--line-2);transform:translateY(-2px);box-shadow:var(--shadow)}
+.cr-card.on{border-color:var(--cc);box-shadow:0 0 0 1px var(--cc),var(--shadow)}
+.cr-card.done{opacity:.5}
+.cr-card-spine{position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--line-2)}
+.cr-card.on .cr-card-spine{background:var(--cc)}
+/* Signalé : rayé, et non plus seulement rouge. Un article signalé est le seul
+   état qui demande une action particulière ; le distinguer par la seule teinte
+   d'un filet de 3 px le rendait invisible à un daltonien comme à l'impression. */
+.cr-card.sig .cr-card-spine{
+  background:repeating-linear-gradient(135deg,var(--stop) 0 3px,transparent 3px 6px)}
+.cr-card-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:9px}
+.cr-cat{font-size:var(--text-xs);letter-spacing:.08em;text-transform:uppercase;font-weight:700;
+  color:var(--cc);background:var(--cc-tint);padding:3px 7px;border-radius:var(--r-sm);white-space:nowrap}
+.cr-card-h{font-family:var(--serif);font-size:var(--text-lg);font-weight:600;line-height:1.25;letter-spacing:-.005em;margin-bottom:9px}
+.cr-card-zone{display:flex;align-items:center;gap:5px;font-size:var(--text-xs);color:var(--cc);font-weight:500;margin-bottom:9px}
+.cr-card-zone .reg{color:var(--ink-3);font-weight:400}
+.cr-card-meta{display:flex;align-items:center;gap:10px;font-size:var(--text-xs);color:var(--ink-2);flex-wrap:wrap}
+.cr-card-meta span{display:flex;align-items:center;gap:var(--space-1)}
+.cr-card-meta b{font-weight:400}
+.cr-card-meta--dates{font-size:var(--text-2xs);margin-top:var(--space-1)}
+.cr-card-meta b.w5{font-weight:500}
+/* Pleine = conforme, creuse = à corriger. L'état ne tient plus à la couleur :
+   il se lit à la forme, donc en daltonisme et sur une impression en niveaux de
+   gris. La couleur reste, elle double l'information au lieu de la porter seule.
+   Hauteur portée à 7 px pour que le creux soit visible à 1,5 px de filet. */
+.cr-pips{display:flex;gap:5px;margin-top:11px}
+.cr-pip{flex:1;height:7px;border-radius:var(--r-pill);background:transparent;
+  border:1.5px solid var(--line-2)}
+.cr-pip.ok{background:var(--go);border-color:var(--go)}
+.cr-pip.no{background:transparent;border-color:var(--stop)}
+.cr-badge{position:absolute;top:12px;right:13px;font-size:var(--text-xs);font-weight:600;
+  display:flex;align-items:center;gap:var(--space-1);padding:3px 7px;border-radius:var(--r-pill)}
+.cr-badge.pub{background:var(--go-tint);color:var(--go)}
+.cr-badge.cls{background:var(--surface-3);color:var(--ink-2)}
+.cr-badge.sig{background:var(--stop-tint);color:var(--stop)}
+.cr-badge.val{background:var(--go-tint);color:var(--go)}
+.cr-rail-empty{background:var(--surface);border:1px dashed var(--line-2);border-radius:var(--r);
+  padding:var(--space-6) var(--space-4);text-align:center;font-size:var(--text-base);color:var(--ink-2)}
+
+.cr-stage{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;
+  box-shadow:var(--shadow);position:relative;animation:pop .36s cubic-bezier(.2,.8,.2,1)}
+.cr-stage::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--cc);z-index:2}
+@keyframes pop{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+.cr-flags{display:flex;gap:var(--space-2);flex-wrap:wrap;padding:12px 30px 0}
+.cr-flag{display:flex;align-items:center;gap:6px;font-size:var(--text-xs);font-weight:600;color:var(--stop);
+  background:var(--stop-tint);border:1px solid color-mix(in srgb,var(--stop) 30%,transparent);border-radius:var(--r-sm);padding:5px 9px}
+/* Texte du mock (M3-84) : ambre, comme le bandeau « LLM mock » de la colonne. */
+.cr-flag.cr-flag--mock{color:var(--amber);background:var(--amber-tint);border-color:color-mix(in srgb,var(--amber) 45%,transparent)}
+
+/* Fond au jeton, et plus de halo. Le dégradé allait de #FBFBFC à #FFF — invisible.
+   Le halo (un disque de 340 px à 14 % de la couleur de rubrique, débordant en haut
+   à droite) décorait le titre sans rien en dire. */
+.cr-hero{padding:22px 30px 22px;border-bottom:1px solid var(--line);position:relative;overflow:hidden;
+  background:var(--surface)}
+.cr-hero-cat{display:flex;align-items:center;gap:10px;margin-bottom:13px;position:relative;flex-wrap:wrap}
+.cr-hero-zone{display:flex;align-items:center;gap:5px;font-size:var(--text-xs);font-weight:600;color:var(--cc);
+  background:var(--cc-tint);padding:3px 9px 3px 7px;border-radius:var(--r-pill)}
+.cr-hero-zone .reg{color:var(--ink-2);font-weight:500}
+.cr-edit-hint{display:flex;align-items:center;gap:5px;font-size:var(--text-xs);color:var(--ink-3);margin-left:auto}
+.cr-hero-h{font-family:var(--serif);font-size:31px;font-weight:600;line-height:1.1;letter-spacing:-.02em;max-width:40ch;position:relative}
+.cr-chapo{font-family:var(--serif);font-size:var(--text-xl);font-style:italic;color:var(--ink-2);line-height:1.5;margin-top:13px;max-width:58ch;position:relative}
+.cr-byline{display:flex;align-items:center;gap:6px;margin-top:15px;font-size:var(--text-base);color:var(--ink-3);position:relative;flex-wrap:wrap}
+.cr-byline .k{font-size:var(--text-xs);font-weight:600}
+.cr-sign{font-family:var(--sans);font-weight:600;color:var(--cc);font-style:normal;padding:2px 6px;min-width:60px}
+.cr-hero-meta{display:flex;gap:18px;margin-top:19px;flex-wrap:wrap;position:relative}
+.cr-hm{display:flex;align-items:center;gap:7px;font-size:var(--text-base);color:var(--ink-2);text-decoration:none}
+.cr-hm b{color:var(--ink);font-weight:600}
+
+/* Le texte seul : le panneau de contrôle n'est plus dessous ni à côté, il vit
+   dans sa colonne ou son tiroir (M3-107). Le bloc de lecture est CENTRÉ : sa
+   largeur est celle de son texte (.cr-prose borne la ligne à 560 px), le reste
+   se répartit de part et d'autre et se lit comme une marge, pas comme un oubli. */
+.cr-body{display:grid;grid-template-columns:minmax(0,1fr)}
+.cr-read{padding:var(--space-6);max-width:calc(560px + 2 * var(--space-6));margin-inline:auto;width:100%}
+/* Espace réservé à plat : ni dégradé de rubrique, ni grain, ni vignette (M3-99). */
+.cr-illo{border-radius:var(--r);overflow:hidden;position:relative;height:200px;margin-bottom:var(--space-2);display:grid;place-items:center;
+  background:var(--surface-2);color:var(--ink-3);isolation:isolate}
+.cr-illo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
+.cr-illo-icon{position:relative;z-index:2;opacity:.5}
+.cr-illo-tag{position:absolute;left:11px;top:11px;z-index:3;font-size:var(--text-xs);font-weight:500;
+  background:rgba(0,0,0,.42);color:#fff;padding:4px 9px;border-radius:var(--r-pill);display:flex;align-items:center;gap:5px}
+.cr-illo-cred{position:absolute;right:11px;bottom:10px;z-index:3;font-size:var(--text-xs);color:rgba(255,255,255,.92);background:rgba(0,0,0,.32);padding:3px 8px;border-radius:var(--r-sm)}
+/* Longueur de ligne du corps d'article, et SEUL endroit qui la borne désormais.
+   En pixels et non en `ch` : l'unité ch vaut la largeur du « 0 » de la police
+   HÉRITÉE par .cr-prose, c'est-à-dire la sans — alors que le texte, lui, est en
+   Georgia. 66ch rendait 84 caractères par ligne, mesurés en comptant les
+   caractères du paragraphe divisés par son nombre de lignes.
+   560 px donnent 71 caractères ; la colonne d'avant l'élargissement en donnait
+   69. On conserve donc la mesure éprouvée au lieu de l'étirer. */
+.cr-prose{margin-top:18px;max-width:560px}
+.cr-para{position:relative}
+.cr-pp{font-family:var(--serif);font-size:var(--text-lg);line-height:1.72;color:var(--ink);margin-bottom:15px;padding:3px 6px}
+.cr-para:first-child .cr-pp::first-letter{font-size:3em;float:left;line-height:.8;padding:6px 9px 0 0;font-weight:600;color:var(--cc);font-family:var(--serif)}
+/* Intertitres du corps (2026-09-17). La lettrine ne doit pas s'appliquer quand
+   l'article s'ouvre sur un intertitre : d'où le sélecteur restreint ci-dessus. */
+.cr-hh{font-family:var(--serif);color:var(--ink);padding:3px 6px;margin:26px 0 10px;line-height:1.3}
+.cr-hh-h2{font-size:var(--text-2xl);font-weight:700}
+.cr-hh-h3{font-size:var(--text-xl);font-weight:600;color:var(--ink-2);margin-top:var(--space-5)}
+/* Couleurs du corps aux jetons (M3-99) : elles suivent le thème sombre d'elles-
+   mêmes, la rustine [data-theme="dark"] qui les corrigeait n'a plus lieu d'être. */
+.cr-para-h::before{content:"";position:absolute;left:-10px;top:30px;bottom:12px;width:2px;background:var(--cc);opacity:.35;border-radius:2px}
+.cr-para-tools{position:absolute;top:0;right:-4px;display:flex;gap:3px;opacity:0;transition:.15s;z-index:4}
+.cr-para:hover .cr-para-tools,.cr-para:focus-within .cr-para-tools{opacity:1}
+.cr-btype{width:24px;height:24px;border-radius:var(--r-sm);font-size:var(--text-xs);font-weight:700;font-family:var(--mono);
+  color:var(--ink-3);background:var(--surface);border:1px solid var(--line);transition:.15s}
+.cr-btype:hover{background:var(--brand-tint);color:var(--brand);border-color:var(--brand)}
+.cr-btype.on{background:var(--brand);color:var(--on-brand);border-color:var(--brand)}
+.cr-add-row{display:flex;gap:var(--space-2);flex-wrap:wrap}
+.cr-para-del{position:static;opacity:1;width:24px;height:24px;border-radius:var(--r-sm);display:grid;place-items:center;
+  color:var(--stop);background:var(--surface);border:1px solid var(--line);transition:.15s;z-index:4}
+.cr-para-del:hover{background:var(--stop-tint)}
+.cr-add{display:inline-flex;align-items:center;gap:6px;font-size:var(--text-xs);font-weight:600;color:var(--brand);
+  border:1px dashed var(--line-2);border-radius:var(--r-sm);padding:7px 12px;transition:.15s;margin-top:2px}
+.cr-add:hover{background:var(--brand-tint);border-color:var(--brand)}
+.cr-excerpt{font-size:var(--text-xs);color:var(--ink-3);margin-top:var(--space-3);text-align:center;font-style:italic}
+
+.cr-ctrl{padding:22px;background:var(--surface-2);display:flex;flex-direction:column;gap:var(--space-5)}
+.cr-panel-h{display:flex;align-items:center;gap:var(--space-2);font-size:var(--text-xs);font-weight:700;color:var(--ink-3);margin-bottom:13px}
+.cr-cdc{display:flex;flex-direction:column;gap:2px}
+.cr-check{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px dashed var(--line)}
+.cr-check:last-child{border-bottom:none}
+.cr-check-ic{flex-shrink:0;margin-top:1px;line-height:0}
+/* Titre et détail côte à côte quand la place le permet, l'un sous l'autre
+   sinon : c'est `flex-wrap` qui décide, pas un point de bascule choisi au
+   jugé. Dans un panneau élargi, chaque critère tient alors sur UNE ligne —
+   « Longueur · Entre 1 000 et 7 000 signes · 1 973 signes » se lit d'un coup,
+   là où deux lignes empilées obligeaient à descendre pour chacun des cinq. */
+.cr-check-body{flex:1;min-width:0;display:flex;flex-wrap:wrap;align-items:baseline;gap:1px 9px}
+.cr-check-t{font-size:var(--text-base);font-weight:500}
+.cr-check-d{font-size:var(--text-xs);color:var(--ink-2)}
+.cr-check-v{font-size:var(--text-xs);font-weight:600;white-space:nowrap;font-family:var(--mono)}
+.cr-v-ok{color:var(--go)} .cr-v-no{color:var(--stop)}
+
+/* Plus de carte dans la carte (M3-99) : les blocs du panneau sont des sections
+   séparées par un filet, sans fond, bordure ni ombre propres. */
+.cr-card2{padding:0}
+.cr-ctrl > * + *{border-top:1px solid var(--line);padding-top:var(--space-5)}
+.cr-geo{display:flex;align-items:center;gap:11px}
+.cr-lbl{font-size:var(--text-xs);color:var(--ink-3);font-weight:600;margin-bottom:5px;display:flex;align-items:center;gap:5px}
+.cr-row{display:flex;gap:var(--space-2)}
+.cr-in{width:100%;font-size:var(--text-base);background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-sm);padding:8px 10px;line-height:1.4;transition:.15s}
+.cr-in:focus{outline:none;border-color:var(--brand);background:var(--surface);box-shadow:0 0 0 3px var(--brand-tint)}
+.cr-in.mono{font-family:var(--mono);font-size:var(--text-xs)}
+textarea.cr-in{resize:none}
+.cr-sel{width:100%;font-size:var(--text-base);background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-sm);padding:8px 10px;transition:.15s;cursor:pointer}
+.cr-sel:focus{outline:none;border-color:var(--brand);background:var(--surface);box-shadow:0 0 0 3px var(--brand-tint)}
+.cr-field{margin-bottom:var(--space-3)}
+.cr-field:last-child{margin-bottom:0}
+
+.cr-rank-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px}
+.cr-rank-inp{width:74px;font-family:var(--sans);font-variant-numeric:tabular-nums;font-size:22px;font-weight:700;text-align:center;background:var(--surface-2);
+  border:1px solid var(--line);border-radius:var(--r-sm);padding:4px 6px}
+.cr-rank-inp:focus{outline:none;border-color:var(--brand);background:var(--surface);box-shadow:0 0 0 3px var(--brand-tint)}
+.cr-rank-lab{font-size:var(--text-xs);font-weight:600;padding:3px 8px;border-radius:var(--r-pill)}
+.cr-rank-track{height:8px;border-radius:var(--r-pill);background:var(--surface-3);overflow:hidden;position:relative;margin-bottom:10px}
+.cr-rank-fill{height:100%;inline-size:var(--pct);border-radius:var(--r-pill);transition:width .3s ease}
+.cr-rank-thr{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--ink-3);opacity:.5}
+
+.cr-count{font-size:var(--text-xs);font-family:var(--mono);color:var(--go);font-weight:600}
+.cr-count.warn{color:var(--amber)} .cr-count.over{color:var(--stop)}
+.cr-flab{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
+.cr-slug{display:flex;align-items:center;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-sm);padding:0 10px;font-family:var(--mono);font-size:var(--text-xs)}
+.cr-slug:focus-within{border-color:var(--brand);background:var(--surface);box-shadow:0 0 0 3px var(--brand-tint)}
+.cr-slug .p{color:var(--ink-3)}
+.cr-slug input{border:none;background:none;flex:1;padding:8px 2px;font-size:var(--text-xs);outline:none}
+.cr-kw{display:flex;flex-wrap:wrap;gap:6px}
+.cr-chip{display:flex;align-items:center;gap:5px;background:var(--brand-tint);color:var(--brand-ink);font-family:var(--mono);font-size:var(--text-xs);padding:4px 6px 4px 9px;border-radius:var(--r-sm);font-weight:500}
+.cr-chip button{display:grid;place-items:center;width:15px;height:15px;border-radius:var(--r-sm);color:var(--brand);opacity:.6}
+.cr-chip button:hover{opacity:1;background:rgba(34,65,123,.12)}
+.cr-kw-add{display:flex;align-items:center;gap:var(--space-1);font-family:var(--mono);font-size:var(--text-xs);color:var(--ink-2);border:1px dashed var(--line-2);border-radius:var(--r-sm);padding:4px 9px}
+.cr-kw-add input{border:none;background:none;width:88px;font-size:var(--text-xs);outline:none;font-family:var(--mono)}
+.cr-olrow{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+.cr-olrow select{width:56px;font-family:var(--mono);font-size:var(--text-xs);font-weight:600;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-sm);padding:6px 4px;cursor:pointer}
+.cr-olrow input{flex:1;font-size:var(--text-xs);background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-sm);padding:6px 8px}
+.cr-olrow input:focus,.cr-olrow select:focus{outline:none;border-color:var(--brand);background:var(--surface);box-shadow:0 0 0 3px var(--brand-tint)}
+.cr-olrow .cr-para-del{position:static;opacity:1;flex-shrink:0}
+/* Le H1 du plan est le titre de l'article : ni niveau à choisir, ni suppression. */
+.cr-oltag{width:56px;flex-shrink:0;text-align:center;font-family:var(--mono);font-size:var(--text-xs);font-weight:600;
+  color:var(--ink-3);background:var(--surface-3);border:1px solid var(--line);border-radius:var(--r-sm);padding:6px 4px}
+.cr-olhint{font-size:var(--text-xs);color:var(--ink-3);line-height:1.45;margin-top:var(--space-2);font-style:italic}
+
+/* Barre de décision (M3-107) : collée en bas de l'article, toujours visible.
+   Deux blocs qui passent à la ligne d'eux-mêmes : l'état (conformité, ranking,
+   rubrique, détail), puis les actions. Une ligne quand ça tient, deux au plus :
+   sous 56rem de barre, les libellés des actions se raccourcissent (le nom
+   accessible, lui, reste entier : aria-label). */
+.cr-barre{position:sticky;bottom:0;z-index:5;margin-top:var(--space-4);container-type:inline-size}
+.cr-barre-in{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2) var(--space-4);
+  background:var(--surface);border:1px solid var(--line-2);border-radius:var(--r);padding:var(--space-2) var(--space-3);box-shadow:var(--shadow-pop)}
+.cr-barre-etat{display:flex;align-items:center;gap:var(--space-3);flex:1 1 auto;min-width:0}
+.cr-barre-actions{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2);margin-left:auto}
+.cr-barre-conf{display:contents}
+.cr-barre-conf .ui-confirmation{max-inline-size:34rem}
+.cr-barre-pips{display:flex;align-items:center;flex:none}
+/* Pastille : forme pleine = conforme, creuse = à corriger (comme .cr-pip du rail).
+   En échec, c'est un bouton (« pourquoi ») : cible de 20 × 24 autour du trait. */
+.cr .cr-barre-pip{display:inline-grid;place-items:center;inline-size:var(--space-5);block-size:var(--space-6);padding:0;border-radius:var(--r-xs)}
+.cr-barre-pip i{display:block;inline-size:var(--space-4);block-size:var(--space-2);border-radius:var(--r-pill);border:1.5px solid var(--line-2)}
+.cr-barre-pip.ok i{background:var(--go);border-color:var(--go)}
+.cr-barre-pip.no i{background:transparent;border-color:var(--stop)}
+.cr .cr-barre-pip.no{cursor:pointer}
+.cr .cr-barre-pip.no:hover{background:var(--stop-tint)}
+.cr-barre-n{margin-left:var(--space-1);font-family:var(--mono);font-size:var(--text-xs);font-weight:700}
+.cr-barre-n.ok{color:var(--go)} .cr-barre-n.no{color:var(--stop)}
+.cr-barre-score{display:inline-flex;align-items:center;gap:var(--space-1);flex:none;font-size:var(--text-xs);color:var(--ink-2);white-space:nowrap}
+.cr-barre-score b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.cr-barre-etat .ui-etiquette{flex:none;white-space:nowrap}
+.cr-barre-t{flex:1 1 8rem;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--text-sm);font-weight:600}
+.cr-barre-detail{flex:none}
+.cr-barre-actions .ui-bouton{white-space:nowrap}
+/* Envoyer en parution : le vert de la décision positive, comme avant. */
+.cr .ui-bouton.cr-barre-pub{background:var(--go);border-color:var(--go);color:var(--on-go)}
+.cr .ui-bouton.cr-barre-pub:hover:not(:disabled){background:var(--go);border-color:var(--go);filter:brightness(1.06)}
+@container (max-width:56rem){
+  .cr-barre-long{display:none}
+}
+.cr-btn{display:flex;align-items:center;gap:var(--space-2);font-size:var(--text-base);font-weight:600;padding:11px 18px;border-radius:var(--r);transition:.16s;white-space:nowrap;position:relative;overflow:hidden}
+.cr-btn:active{transform:translateY(1px)}
+.cr-btn[disabled]{opacity:.45;pointer-events:none}
+.cr-btn.ghost{color:var(--ink-2);border:1px solid var(--line-2)}
+.cr-btn.ghost:hover{background:var(--surface-2);color:var(--ink)}
+.cr-btn.arch{color:var(--ink);border:1px solid var(--line-2);background:var(--surface-2)}
+.cr-btn.arch:hover{background:var(--surface-3)}
+.cr-btn.pub{color:var(--on-go);background:var(--go)}
+.cr-btn.pub:hover{filter:brightness(1.06)}
+
+/* Texte pour lecteur d'écran seulement (raison du bouton de parution grisé). */
+.cr-sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+.cr-schedule{display:flex;align-items:center;gap:6px;font-size:var(--text-xs);color:var(--ink-2)}
+.cr-schedule input{font-size:var(--text-xs);border:1px solid var(--line);border-radius:var(--r-sm);padding:5px 7px;background:var(--surface-2)}
+
+.cr-empty{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:72px 30px;text-align:center}
+.cr-empty-ic{color:var(--go);display:grid;place-items:center;margin:0 auto 18px}
+.cr-empty h3{font-family:var(--serif);font-size:25px;font-weight:600;margin-bottom:var(--space-2)}
+.cr-empty p{font-size:var(--text-base);color:var(--ink-2);max-width:44ch;margin:0 auto}
+
+/* onglet Suivi */
+.sv-wrap{display:flex;flex-direction:column;gap:var(--space-5)}
+.sv-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px}
+.sv-tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px}
+.sv-tile .n{font-family:var(--sans);font-variant-numeric:tabular-nums;font-size:26px;font-weight:700;letter-spacing:-.02em}
+.sv-tile .l{font-size:var(--text-xs);color:var(--ink-2);margin-top:var(--space-1)}
+.sv-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px}
+.sv-card h4{font-size:var(--text-xs);color:var(--ink-3);font-weight:700;margin-bottom:14px}
+.sv-legend{display:flex;gap:var(--space-4);font-size:var(--text-xs);color:var(--ink-2);margin-top:10px;flex-wrap:wrap}
+.sv-legend span{display:flex;align-items:center;gap:6px}
+.sv-sw{width:11px;height:11px;border-radius:3px;display:inline-block}
+
+/* Rien ici pour la colonne : elle reste verticale à toutes les largeurs et se
+   réduit aux icônes toute seule, par la règle de base en tête de fichier. */
+/* (L'ancienne bascule à 960 px est remplacée par la grille de la relecture, plus haut.) */
+
+/* ---------- onglet Historique ---------- */
+/* Flex plutôt que le `float:right` utilisé par l'onglet Suivi : les outils de
+   l'historique (onglets + champ de recherche) sont plus hauts que la ligne du
+   titre, et un flottant les ferait déborder sur le tableau. */
+.sv-card h4.hi-h{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.hi-tools{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.hi-n{margin-left:6px;font-size:var(--text-xs);color:var(--ink-3);font-weight:600}
+.cr-tab.on .hi-n{color:inherit;opacity:.75}
+.hi-search{font:inherit;font-size:var(--text-xs);padding:5px 10px;border:1px solid var(--line);border-radius:var(--r-sm);
+  background:var(--surface-2);color:var(--ink);min-width:190px}
+.hi-search:focus{outline:none;border-color:var(--brand);background:var(--surface)}
+
+/* L'historique ne cesse de croître : la largeur des colonnes est fixée pour que
+   la lecture en diagonale reste possible, et le débordement reste dans le tableau
+   plutôt que de faire glisser toute la page. */
+.hi-scroll{overflow-x:auto;margin:0 -20px;padding:0 var(--space-5)}
+.hi-table{width:100%;border-collapse:collapse;font-size:var(--text-base);min-width:660px}
+.hi-table th{text-align:left;font-size:var(--text-xs);color:var(--ink-3);
+  font-weight:700;padding:0 10px 8px 0;border-bottom:1px solid var(--line);white-space:nowrap}
+.hi-table td{padding:10px 10px 10px 0;border-bottom:1px dashed var(--line);vertical-align:top}
+.hi-row{cursor:pointer}
+.hi-row:hover td{background:var(--surface-2)}
+.hi-row:focus-visible{outline:2px solid var(--brand);outline-offset:-2px}
+.hi-title{min-width:280px}
+/* La borne est sur le TITRE et non sur la cellule : en disposition de tableau
+   automatique, un max-width posé sur un <td> est ignoré, la cellule se calant
+   sur son contenu. Mesuré à 1693 px avant la borne : un titre s'étirait sur UNE
+   ligne de 104 caractères, qui se scanne mal dans une liste. */
+.hi-t{font-family:var(--serif);font-size:var(--text-base);font-weight:600;line-height:1.3;margin-bottom:5px;max-width:620px}
+.hi-sub{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:var(--text-xs);color:var(--ink-2)}
+.hi-sub span{display:flex;align-items:center;gap:3px}
+.hi-chip{font-size:var(--text-xs);letter-spacing:.06em;text-transform:uppercase;font-weight:700;
+  padding:3px 7px;border-radius:var(--r-sm);white-space:nowrap}
+.hi-src{color:var(--ink-2);max-width:170px}
+.hi-kind{display:inline-block;margin-left:6px;font-size:var(--text-xs);color:var(--ink-3);
+  background:var(--surface-3);border-radius:var(--r-sm);padding:1px 5px}
+.hi-date,.hi-who{white-space:nowrap;color:var(--ink-2)}
+.hi-sched{display:flex;align-items:center;gap:3px;font-size:var(--text-xs);color:var(--ink-3);margin-top:3px}
+/* Date reprise par la migration 003 : approchée, et l'écran doit le montrer. */
+.hi-legacy{color:var(--ink-3);border-bottom:1px dotted var(--line-2);cursor:help}
+.hi-none{color:var(--ink-3)}
+.hi-empty{font-size:var(--text-base);color:var(--ink-2);padding:18px 0}
+.hi-more{margin-top:14px;text-align:center}
+.hi-foot{margin-top:var(--space-3);font-size:var(--text-xs);color:var(--ink-3)}
+
+/* ---------- écran d'accueil ---------- */
+/* Rien de neuf ici : la tuile est .cr-kpi, déjà la référence de l'application
+   (nombre 30/700, libellé 12 px dessous, 16/20, filet 1 px, --shadow). L'accueil
+   ne fait que la poser en grille et, quand elle désigne des articles, en faire un
+   bouton. Aucune ombre supplémentaire, aucune couleur hors jetons, aucune carte
+   dans une carte : les tuiles sont posées sur le fond, pas dans un panneau. */
+.hm-wrap{display:flex;flex-direction:column;gap:28px}
+/* Même forme que .cr-rail-title : 12 px, en --ink-2 parce que le titre est posé
+   sur --bg, où --ink-3 ne tient pas le 4,5:1. Le complément (date, volume) tient
+   sur la MÊME ligne, en graisse normale. */
+.hm-h{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:0 2px 13px;
+  font-size:var(--text-xs);color:var(--ink-2);font-weight:600}
+.hm-h span{font-weight:400;color:var(--ink-2)}
+
+.hm-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(156px,1fr));gap:var(--space-3)}
+/* .cr button (base.css) remet background et border à zéro, et sa spécificité
+   dépasse celle de .cr-kpi : une tuile-bouton doit donc les redéclarer, sans
+   quoi elle perd son fond et son filet. Même jetons, même ombre — seul le
+   curseur et le filet au survol disent qu'on peut cliquer. */
+.cr-kpi.hm-go{background:var(--surface);border:1px solid var(--line);text-align:left;
+  display:block;width:100%;transition:border-color .15s}
+.cr-kpi.hm-go:hover{border-color:var(--line-2)}
+
+.hm-note{font-size:var(--text-base);color:var(--ink-2);line-height:1.55;margin-top:13px;max-width:82ch}
+.hm-note b{color:var(--ink);font-weight:600}
+
+.hm-barh{font-size:var(--text-xs);color:var(--ink-2);margin:18px 2px 9px}
+.hm-bars{display:flex;flex-direction:column;gap:var(--space-2);max-width:620px}
+.hm-bar{display:flex;align-items:center;gap:var(--space-3);font-size:var(--text-base)}
+.hm-bar-l{flex:0 0 152px;color:var(--ink-2)}
+.hm-bar-t{flex:1;height:10px;background:var(--surface-3);border-radius:var(--r-pill);overflow:hidden}
+/* La barre compte des ÉCHECS : --stop est la lecture juste, pas une décoration. */
+.hm-bar-t i{display:block;height:100%;background:var(--stop)}
+.hm-bar-n{flex:0 0 32px;text-align:right;font-family:var(--sans);font-variant-numeric:tabular-nums;font-weight:600}
+
+/* Même forme que .cr-rail-empty : un bloc en filet pointillé dit « il n'y a rien
+   ici », là où une tuile à zéro dirait « il y en a zéro » — ce n'est pas pareil. */
+.hm-empty{background:var(--surface);border:1px dashed var(--line-2);border-radius:var(--r);
+  padding:18px 16px;font-size:var(--text-base);color:var(--ink-2)}
+
+.hm-measures{display:grid;grid-template-columns:repeat(auto-fit,minmax(304px,1fr));gap:var(--space-3)}
+.hm-measure{min-width:0}
+/* Le créneau du nombre accueille une PHRASE quand la mesure n'existe pas encore :
+   30 px/700 y serait illisible, et un tiret muet mentirait par omission. */
+.cr-kpi .n.hm-na{font-size:var(--text-base);font-weight:600;letter-spacing:0;line-height:1.4;color:var(--ink-2)}
+.hm-why{font-size:var(--text-xs);color:var(--ink-2);line-height:1.55;margin-top:11px;padding-top:11px;
+  border-top:1px dashed var(--line)}
+.hm-why b{color:var(--ink);font-weight:600}
+
+.hm-det{margin-top:14px}
+.hm-det>summary{display:flex;align-items:center;gap:7px;cursor:pointer;list-style:none;
+  font-size:var(--text-xs);font-weight:600;color:var(--ink-2)}
+.hm-det>summary::-webkit-details-marker{display:none}
+.hm-det>summary::before{content:"▸";color:var(--ink-3)}
+.hm-det[open]>summary::before{content:"▾"}
+.hm-det>summary:hover{color:var(--ink)}
+.hm-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.hm-list span{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);
+  padding:4px 9px;font-size:var(--text-xs);color:var(--ink-2)}
+
+/* Puce du filtre venu de l'accueil, en tête du rail. */
+.cr-focus{display:flex;align-items:center;gap:7px;margin:0 2px 12px;padding:7px 8px 7px 10px;
+  font-size:var(--text-xs);font-weight:600;color:var(--brand-ink);background:var(--brand-tint);
+  border:1px solid var(--line);border-radius:var(--r-sm);line-height:1.3}
+.cr-focus span{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.cr-focus button{margin-left:auto;flex:0 0 auto;display:grid;place-items:center;
+  width:20px;height:20px;border-radius:var(--r-sm);color:var(--brand);opacity:.7}
+.cr-focus button:hover{opacity:1;background:var(--surface)}
+
+/* Relecture automatique (M3-89) : pastille sur la carte du rail, panneau dans l'article. */
+.cr-relu{display:inline-flex;align-items:center;gap:6px;font-size:var(--text-2xs);font-weight:600;margin-top:5px;padding:2px 8px;border-radius:var(--r-pill)}
+.cr-relu-dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex:none}
+.cr-relu-ok{color:var(--go);background:var(--go-tint)}
+.cr-relu-warn{color:var(--amber);background:var(--amber-tint)}
+.cr-relu-stop{color:var(--stop);background:var(--stop-tint)}
+.cr-relecture{border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;display:flex;flex-direction:column;gap:6px;font-size:var(--text-sm)}
+.cr-relecture-top{display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);flex-wrap:wrap}
+.cr-relecture-top .cr-relu{margin-top:0}
+.cr-relecture-fid{color:var(--ink-2);font-size:var(--text-xs)}
+.cr-relecture-resume{margin:0;color:var(--ink-2)}
+.cr-relecture-t{font-weight:600;font-size:var(--text-xs);color:var(--ink-2)}
+.cr-relecture-l{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:3px}
+.cr-relecture-l span{color:var(--ink-3)}
+.cr-relecture-vide{color:var(--ink-2)}
+.cr-relecture-pied{font-size:var(--text-2xs);color:var(--ink-3)}
+
+/* Rail repliable par jour de génération : l'en-tête reprend la forme de
+   .cr-rail-title (12 px, --ink-2), le compteur celle des onglets. */
+.cr-jour{display:flex;flex-direction:column;gap:11px}
+.cr-jour-btn{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:6px;width:100%;
+  padding:var(--space-1);font-size:var(--text-xs);font-weight:600;color:var(--ink-2)}
+.cr-jour-btn:hover{color:var(--ink)}
+.cr-jour-btn:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:var(--r-xs)}
+.cr-jour-ic{display:inline-block;width:1em;color:var(--ink-3)}
+.cr-jour-btn .n{margin-left:auto;font-weight:500;color:var(--ink-3)}
+.cr-jour-liste{display:flex;flex-direction:column;gap:11px}
+.cr-jour-liste[hidden]{display:none}
+
+/* ---------- relecture : ex-style={{}} de Scene, Rail et du panneau (M3-107) ---------- */
+.cr-rail-n{color:var(--brand)}
+.cr-hero-dates{margin-top:var(--space-2)}
+.cr-cat.cr-cat--neutre{background:var(--surface-3);color:var(--ink-2)}
+.cr-hm--source,.cr-hm--source b{color:var(--cc)}
+.cr-hm--manque{color:var(--stop)}
+.cr-illo.cr-illo--manque{background:var(--stop-tint);color:var(--stop)}
+.cr-illo--manque .cr-illo-tag{background:var(--stop);color:var(--on-stop)}
+.cr-illo-manque{position:relative;z-index:2;text-align:center;font-size:var(--text-xs);font-weight:500}
+.cr-illo-manque > div{margin-top:var(--space-1)}
+.cr-note{font-size:var(--text-xs);color:var(--ink-2);margin-bottom:var(--space-3)}
+.cr-detail-sec .cr-row{margin-bottom:var(--space-2)}
+.cr-in.cr-in--large{flex:2}
+.cr-in.cr-in--etroit{flex:1}
+.cr-flab .cr-lbl{margin:0}
+.cr-rank-top .cr-lbl{margin-bottom:var(--space-2)}
+.cr-rank-lab.cr-rank--fort{color:var(--go);background:var(--go-tint)}
+.cr-rank-lab.cr-rank--aligne{color:var(--go);background:var(--go-tint)}
+.cr-rank-lab.cr-rank--sous{color:var(--stop);background:var(--stop-tint)}
+.cr-rank-fill.cr-rank--fort{background:var(--go)}
+.cr-rank-fill.cr-rank--aligne{background:var(--go)}
+.cr-rank-fill.cr-rank--sous{background:var(--stop)}
+/* Le seuil d'alignement : celui des Paramètres (--seuil, posé par RangRanking). */
+.cr-rank-thr{left:var(--seuil,60%)}
+/* M3-113 (C3) : ranking lisible — score / seuil, légende des bandes, motif en texte. */
+.cr-rank-score{margin:0 0 var(--space-2);font-size:var(--text-xs);color:var(--ink-2);font-variant-numeric:tabular-nums}
+.cr-rank-legende{margin:0 0 var(--space-2);font-size:var(--text-2xs);color:var(--ink-3)}
+.cr-rank-motif-t{display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);margin-bottom:var(--space-1)}
+.cr-rank-motif-t .cr-lbl{margin:0}
+.cr-rank-motif{margin:0 0 var(--space-2);font-size:var(--text-sm);color:var(--ink);white-space:pre-wrap;overflow-wrap:anywhere}
+.cr-add.cr-add--danger{color:var(--stop);border-color:var(--stop)}
+.cr-add.cr-add--suite{margin-top:var(--space-2)}
+.cr-invisible{visibility:hidden}
+.cr-ink-3{color:var(--ink-3)}
+/* Lien externe (source, parution) : nouvel onglet, l'autre moitié de l'écran. */
+.cr-lien-ext{display:inline-flex;align-items:center;gap:var(--space-1);font-size:var(--text-xs);font-weight:600;color:var(--brand);text-decoration:none}
+.cr-lien-ext:hover{text-decoration:underline}
+.cr-detail-sec .cr-lien-ext{margin-top:var(--space-1)}
+/* M3-112 : styles en ligne de la console passés en classes, valeurs inchangées.
+   Les px qui restent n'ont pas de jeton équivalent (--space-* : 4, 8, 12, 16…). */
+.sv-vide{color:var(--ink-2);font-size:var(--text-base)}
+.sv-svg{width:100%;height:auto;overflow:visible}
+.sv-periodes{float:right}
+.sv-periodes .cr-tab{padding:var(--space-1) 10px;font-size:var(--text-xs);margin-left:var(--space-1)}
+/* Mêmes couleurs que SERIES_COULEURS (consulterSuivi.regles), qui teinte les barres du SVG. */
+.sv-sw--0{background:#3A63B4}
+.sv-sw--1{background:#1B7A50}
+.sv-sw--2{background:#B54334}
+.sv-rub{display:flex;align-items:center;gap:10px;margin-bottom:var(--space-2);font-size:var(--text-base)}
+.sv-rub-k{width:110px;color:var(--ink-2)}
+.sv-rub-t{flex:1;height:10px;background:var(--surface-3);border-radius:var(--r-pill);overflow:hidden}
+.sv-rub-t i{display:block;height:100%;width:var(--pct);background:var(--brand)}
+.sv-rub b{width:24px;text-align:right}
+.sv-user{display:flex;justify-content:space-between;font-size:var(--text-base);padding:6px 0;border-bottom:1px dashed var(--line)}
+.sv-user-n{color:var(--ink-2)}
+.sv-note{font-size:var(--text-xs);color:var(--ink-3);margin-top:10px}
+/* Rubrique (catInfo().token) et statut : la couleur passe par une classe, plus par le style. */
+.cat-brand{--cc:var(--brand);--cc-tint:var(--brand-tint)}
+.cat-rub-economie{--cc:var(--rub-economie);--cc-tint:var(--rub-economie-tint)}
+.cat-rub-culture{--cc:var(--rub-culture);--cc-tint:var(--rub-culture-tint)}
+.cat-rub-environnement{--cc:var(--rub-environnement);--cc-tint:var(--rub-environnement-tint)}
+.cat-rub-societe{--cc:var(--rub-societe);--cc-tint:var(--rub-societe-tint)}
+.cat-rub-sport{--cc:var(--rub-sport);--cc-tint:var(--rub-sport-tint)}
+.cr-dot--brouillon{--dot:var(--status-brouillon)}
+.cr-dot--a_revoir{--dot:var(--status-a_revoir)}
+.cr-dot--signale{--dot:var(--status-signale)}
+.cr-dot--valide{--dot:var(--status-valide)}
+.cr-dot--publie{--dot:var(--status-publie)}
+.cr-dot--archive{--dot:var(--status-archive)}
+/* Modales de la console. */
+.cr-btn.m3-modal-x{padding:6px 9px}
+.cr-btn.md-petit{padding:var(--space-1) var(--space-2);font-size:var(--text-xs)}
+.md-pied{margin-top:14px;text-align:right}
+.md-pied--large{margin-top:var(--space-4)}
+.md-demi{flex:1;min-width:0}
+.md-erreur{font-size:var(--text-xs);color:var(--stop);min-height:1em;margin:var(--space-1) 0}
+.md-note{font-size:var(--text-xs);color:var(--ink-3)}
+.md-vide{font-size:var(--text-base);color:var(--ink-2)}
+.md-notif{display:flex;gap:10px;padding:10px 0;border-bottom:1px dashed var(--line)}
+.md-notif.lu{opacity:.55}
+.md-notif-ic{color:var(--ink-3)}
+.md-notif-ic--error{color:var(--stop)}
+.md-notif-ic--warning{color:var(--amber)}
+.md-notif-corps{flex:1;min-width:0}
+.md-notif-t{font-size:var(--text-base);font-weight:600}
+.md-notif-d{font-size:var(--text-xs);color:var(--ink-2)}
+.md-notif-at{font-size:var(--text-xs);color:var(--ink-3);margin-top:2px}
+.md-depts{display:flex;flex-wrap:wrap;gap:var(--space-2);margin:6px 0 var(--space-4)}
+.md-dept{display:flex;align-items:center;gap:5px;font-size:var(--text-base);background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r);padding:5px 9px}
+.md-case{display:flex;align-items:center;gap:var(--space-2);font-size:var(--text-base);margin:var(--space-1) 0}
+.md-case--haut{margin:6px 0 var(--space-1)}
+.md-case--kb{margin:6px 0 10px}
+.md-case--regen{margin:10px 0 0}
+.md-aucune{font-size:var(--text-sm);color:var(--ink-3);margin:6px 0}
+.cr-lbl.md-sec{margin-top:var(--space-4)}
+.md-intro{font-size:var(--text-base);color:var(--ink-2);margin-bottom:14px;line-height:1.5}
+.md-contents{display:contents}
+.md-alerte{font-size:var(--text-base);color:var(--amber);background:var(--amber-tint);border-radius:var(--r);padding:var(--space-2) 10px;margin-bottom:var(--space-3)}
+.md-texte{font-size:var(--text-base);color:var(--ink-2);margin-bottom:var(--space-3)}

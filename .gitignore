@@ -1,0 +1,23 @@
+# Dépendances
+node_modules/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Next.js
+.next/
+next-env.d.ts
+*.tsbuildinfo
+/AGENTS.md
+
+# Journal fichier (src/lib/log.js) : identifiants nominatifs, jamais versionné
+logs/
+*.log
+npm-debug.log*
+
+# OS, éditeurs
+Thumbs.db
+.DS_Store
+.obsidian/

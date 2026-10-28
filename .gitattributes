@@ -1,0 +1,4 @@
+# Scripts exécutés sur Linux : LF quel que soit le poste qui les extrait
+# (core.autocrlf=true sur les postes Windows les passerait en CRLF).
+*.sh   text eol=lf
+*.cron text eol=lf

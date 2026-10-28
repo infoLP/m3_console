@@ -1,0 +1,92 @@
+/* M3 — écran de connexion.
+
+   Le <body> porte `cr lg` : `cr` apporte les jetons de couleur et le fond
+   « papier » de base.css — sans cette classe, aucun var() ne se résout —,
+   `lg` ne sert qu'à cadrer la page.
+
+   Les sélecteurs sont en (0,2,0) pour passer devant les remises à zéro de
+   base.css, qui sont en (0,1,1) : `.cr button{background:none}` effacerait
+   sinon le fond du bouton. */
+
+.cr.lg { display:grid; place-items:center; min-height:100vh; min-height:100dvh;
+         padding:var(--space-8) var(--space-4); }
+
+.cr .lg-box { position:relative; z-index:1; width:min(400px, 100%);
+              background:var(--surface); border:1px solid var(--line);
+              border-radius:var(--r); padding:30px 28px 26px;
+              box-shadow:var(--shadow); }
+/* Une ombre portée ne se voit pas sur un fond sombre : une bordure la remplace,
+   plutôt qu'un halo lumineux. */
+[data-theme="dark"] .cr .lg-box { box-shadow:none; border-color:var(--line-2); }
+
+.cr .lg-brand { font-family:var(--serif); font-size:23px; font-weight:600;
+                line-height:1.25; margin:0 0 3px; color:var(--brand-ink); }
+/* --ink-3 ne fait que 3,17:1 sur --surface : sous le seuil AA. */
+.cr .lg-sub { color:var(--ink-2); font-size:var(--text-base); margin:0 0 var(--space-6); }
+
+.cr .lg-field { margin:0 0 var(--space-4); }
+.cr .lg-label { display:block; font-size:var(--text-base); font-weight:500;
+                color:var(--ink-2); margin:0 0 6px; }
+
+.cr .lg-input { width:100%; display:block; padding:10px 12px; font:inherit;
+                font-size:var(--text-md); color:var(--ink); background:var(--surface-2);
+                border:1px solid var(--line-2); border-radius:var(--r-sm);
+                transition:border-color .15s, background .15s; }
+.cr .lg-input::placeholder { color:var(--ink-3); opacity:1; }
+.cr .lg-input:hover { border-color:var(--ink-3); }
+.cr .lg-input:focus-visible { outline:2px solid var(--brand); outline-offset:2px;
+                              border-color:var(--brand); border-radius:var(--r-sm);
+                              background:var(--surface); }
+
+.cr .lg-btn { width:100%; margin:22px 0 0; padding:11px; font:inherit;
+              font-size:var(--text-md); font-weight:600; color:var(--on-brand);
+              background:var(--brand); border:1px solid var(--brand);
+              border-radius:var(--r-sm); cursor:pointer; transition:filter .15s; }
+.cr .lg-btn:hover:not(:disabled) { filter:brightness(1.12); }
+.cr .lg-btn:focus-visible { outline:2px solid var(--brand); outline-offset:2px;
+                            border-radius:var(--r-sm); }
+.cr .lg-btn:disabled { opacity:.6; cursor:default; }
+
+/* `hidden` doit gagner contre nos propres règles d'affichage. La feuille du
+   navigateur pose `[hidden]{display:none}` en (0,0,1) : n'importe quel sélecteur
+   d'ici — `.cr .lg-or{display:flex}`, en (0,2,0) — passe devant et ré-affiche
+   l'élément. Le séparateur « ou » resterait visible sans SSO. */
+.cr [hidden] { display:none !important; }
+
+/* --- SSO Entra (M3-42) ------------------------------------------------------
+   Le bloc est masqué par `hidden` tant que /api/auth/modes n'a pas répondu, et
+   le reste quand le SSO n'est pas configuré. Rien ne bouge donc sur l'écran
+   actuel : aujourd'hui la réponse dit « local seulement ». */
+
+/* Un lien, pas un bouton : le départ vers Microsoft doit être une navigation de
+   premier niveau. Un fetch() reviendrait avec une page d'erreur CORS. */
+.cr .lg-sso-btn { display:block; width:100%; box-sizing:border-box;
+                  padding:11px; text-align:center; text-decoration:none;
+                  font:inherit; font-size:var(--text-md); font-weight:600;
+                  color:var(--on-brand); background:var(--brand);
+                  border:1px solid var(--brand); border-radius:var(--r-sm);
+                  cursor:pointer; transition:filter .15s; }
+.cr .lg-sso-btn:hover { filter:brightness(1.12); }
+.cr .lg-sso-btn:focus-visible { outline:2px solid var(--brand); outline-offset:2px;
+                                border-radius:var(--r-sm); }
+.cr .lg-sso-hint { margin:9px 0 0; font-size:var(--text-base); line-height:1.5;
+                   color:var(--ink-2); }
+
+.cr .lg-or { display:flex; align-items:center; gap:var(--space-3); margin:22px 0 2px;
+             font-size:var(--text-base); color:var(--ink-3); }
+.cr .lg-or::before, .cr .lg-or::after { content:""; flex:1 1 auto; height:1px;
+                                        background:var(--line); }
+
+/* Quand les deux moyens coexistent, le mot de passe devient le chemin de
+   secours : il reste entièrement utilisable, mais cesse de réclamer l'œil. */
+.cr .lg-btn.lg-alt { color:var(--brand-ink); background:transparent;
+                     border-color:var(--line-2); }
+.cr .lg-btn.lg-alt:hover:not(:disabled) { filter:none; border-color:var(--brand); }
+
+.cr .lg-err { display:none; background:var(--stop-tint); color:var(--stop);
+              border:1px solid var(--stop); border-radius:var(--r-sm); padding:10px 12px;
+              font-size:var(--text-base); line-height:1.45; margin:0 0 18px; }
+.cr .lg-err.on { display:block; }
+
+.cr .lg-note { margin:22px 0 0; padding-top:18px; border-top:1px solid var(--line);
+               font-size:var(--text-base); line-height:1.55; color:var(--ink-2); }

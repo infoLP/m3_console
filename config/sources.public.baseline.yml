@@ -1,0 +1,256 @@
+# BASELINE public — copie de référence figée (point de restauration). NE PAS éditer.
+sources:
+  - id: v1
+    name: Région Nouvelle-Aquitaine
+    kind: public
+    category: Institutions publiques
+    commune: Bordeaux
+    type: article
+    siteUrl: https://www.nouvelle-aquitaine.fr/
+    listUrl: https://www.nouvelle-aquitaine.fr/aides-et-ressources/les-publications
+    pressUrl: https://www.nouvelle-aquitaine.fr/aides-et-ressources/les-communiques-de-presse
+    frequency: Quotidienne ou +
+    priority: A
+    method: Extraction des listes HTML + suivi des communiqués/PDF
+    active: true
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: v2
+    name: ARS Nouvelle-Aquitaine
+    kind: public
+    category: Santé et biotech
+    commune: Bordeaux
+    type: rss
+    siteUrl: https://www.nouvelle-aquitaine.ars.sante.fr/
+    listUrl: https://www.nouvelle-aquitaine.ars.sante.fr/liste-actualites?archive=0
+    pressUrl: https://www.nouvelle-aquitaine.ars.sante.fr/tous-les-communiques-et-dossiers-de-presse-de-lars-nouvelle-aquitaine
+    rssUrl: https://www.nouvelle-aquitaine.ars.sante.fr/rss.xml?type=ars_actualite
+    frequency: Quotidienne ou +
+    priority: A
+    method: Extraction des listes HTML + suivi des communiqués/PDF
+    active: true
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: v3
+    name: DREAL Nouvelle-Aquitaine
+    kind: public
+    category: Institutions publiques
+    commune: Bordeaux
+    type: article
+    siteUrl: https://www.nouvelle-aquitaine.developpement-durable.gouv.fr/
+    listUrl: https://www.nouvelle-aquitaine.developpement-durable.gouv.fr/spip.php?page=liste-actualites&lang=fr
+    frequency: Quotidienne ou +
+    priority: A
+    method: Surveillance de la page d’accueil et détection des changements
+    active: true
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: v5
+    name: DREETS Nouvelle-Aquitaine
+    kind: public
+    category: Institutions publiques
+    commune: Bordeaux
+    type: rss
+    siteUrl: https://nouvelle-aquitaine.dreets.gouv.fr/
+    listUrl: https://nouvelle-aquitaine.dreets.gouv.fr/Entreprises-emploi-economie
+    rssUrl: https://nouvelle-aquitaine.dreets.gouv.fr/spip.php?page=backend
+    frequency: Plusieurs fois/semaine
+    priority: A
+    method: Lecture RSS directe + dédoublonnage par URL/date
+    active: true
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: v6
+    name: DRAC Nouvelle-Aquitaine
+    kind: public
+    category: Culture et spectacles
+    commune: Bordeaux
+    type: article
+    siteUrl: https://www.culture.gouv.fr/regions/drac-nouvelle-aquitaine
+    listUrl: https://www.culture.gouv.fr/recherche?query=&page=1&refinementList%5Bcontent_type_name%5D%5B0%5D=Actualit%C3%A9&refinementList%5Bcontent_type_name%5D%5B1%5D=Contenu%20Presse&refinementList%5Bcontent_type_name%5D%5B2%5D=Publication&refinementList%5Btaxonomy_region_data.label%5D%5B0%5D=Nouvelle-Aquitaine&refinementList%5Btaxonomy_region_data.label%5D%5B1%5D=En%20r%C3%A9gions
+    frequency: Mensuelle
+    priority: B
+    method: Extraction de la rubrique Actualités + détection de nouvelles URL
+    active: true
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: v7
+    name: CMA Nouvelle-Aquitaine
+    kind: public
+    category: Économie et réseaux
+    commune: Bordeaux
+    type: article
+    siteUrl: https://cma-nouvelleaquitaine.fr/
+    listUrl: https://cma-nouvelleaquitaine.fr/a-cote-de-chez-vous/actualites
+    pressUrl: https://cma-nouvelleaquitaine.fr/nous-connaitre/presse
+    frequency: Mensuelle
+    priority: B
+    method: Extraction de la rubrique Actualités + détection de nouvelles URL
+    active: true
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: v8
+    name: CCI Nouvelle-Aquitaine
+    kind: public
+    category: Économie et réseaux
+    commune: Bordeaux
+    type: article
+    siteUrl: https://www.nouvelle-aquitaine.cci.fr/
+    listUrl: https://www.nouvelle-aquitaine.cci.fr/economie-regionale-et-internationale
+    pressUrl: https://www.nouvelle-aquitaine.cci.fr/espace-presse-0
+    frequency: Mensuelle
+    priority: B
+    method: Surveillance de la page d’accueil et détection des changements
+    active: false
+    lastCheck:
+      http: 403
+      at: 2026-09-04
+    zone: {}
+  - id: v9
+    name: ADEME Nouvelle-Aquitaine
+    kind: public
+    category: Énergie et environnement
+    commune: Bordeaux
+    type: article
+    siteUrl: https://www.ademe.fr/direction-regionale/nouvelle-aquitaine
+    pressUrl: https://www.ademe.fr/presse/communique-regional/?direction-regionale=nouvelle-aquitaine
+    frequency: Mensuelle
+    priority: B
+    method: Surveillance de la page d’accueil et détection des changements
+    active: false
+    lastCheck:
+      http: 403
+      at: 2026-09-04
+    zone: {}
+  - id: v11
+    name: Banque des Territoires Nouvelle-Aquitaine
+    kind: public
+    category: Économie et réseaux
+    commune: Bordeaux
+    type: article
+    siteUrl: https://www.banquedesterritoires.fr/
+    listUrl: https://www.banquedesterritoires.fr/blog-des-territoires
+    pressUrl: https://www.banquedesterritoires.fr/espace-presse
+    frequency: Mensuelle
+    priority: B
+    method: Extraction des listes HTML + suivi des communiqués/PDF
+    active: true
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: v12
+    name: Préfecture — Charente-Maritime
+    kind: public
+    category: Institutions publiques
+    commune: La Rochelle
+    dept: "17"
+    type: article
+    siteUrl: https://www.charente-maritime.gouv.fr/
+    listUrl: https://www.charente-maritime.gouv.fr/Actualites
+    pressUrl: https://www.charente-maritime.gouv.fr/Actualites/Espace-Presse
+    frequency: Plusieurs fois/semaine
+    priority: A
+    method: Extraction des listes HTML + suivi des communiqués/PDF
+    active: true
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: v13
+    name: Conseil départemental — Charente-Maritime
+    kind: public
+    category: Institutions publiques
+    commune: La Rochelle
+    dept: "17"
+    type: article
+    siteUrl: https://la.charente-maritime.fr/
+    pressUrl: https://la.charente-maritime.fr/espace-presse/communiques-presse
+    frequency: Plusieurs fois/semaine
+    priority: A
+    method: Extraction des listes HTML + suivi des communiqués/PDF
+    active: true
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: v14
+    name: SDIS 17
+    kind: public
+    category: Sécurité et secours
+    commune: La Rochelle
+    dept: "17"
+    type: rss
+    siteUrl: https://sdis17.fr/
+    rssUrl: https://sdis17.fr/feed/
+    frequency: Mensuelle
+    priority: B
+    method: Lecture RSS directe + dédoublonnage par URL/date
+    active: true
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: v15
+    name: ADIL 17
+    kind: public
+    category: Aménagement et immobilier
+    commune: La Rochelle
+    dept: "17"
+    type: article
+    siteUrl: https://www.anil.org/adil-17/
+    listUrl: https://www.anil.org/actualites-evenements/
+    pressUrl: https://www.anil.org/presse/
+    frequency: Mensuelle
+    priority: B
+    method: Extraction des listes HTML + suivi des communiqués/PDF
+    active: true
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: v16
+    name: Infiniment Charentes
+    kind: public
+    category: Tourisme et attractivité
+    commune: La Rochelle
+    type: article
+    siteUrl: https://www.infiniment-charentes.com/
+    listUrl: https://www.infiniment-charentes.com/actualite-incendies-velodyssee
+    frequency: Mensuelle
+    priority: B
+    method: Extraction de la rubrique Actualités + détection de nouvelles URL
+    active: true
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}
+  - id: v17
+    name: Chambre d’agriculture de Charente-Maritime
+    kind: public
+    category: Agriculture et alimentation
+    commune: La Rochelle
+    dept: "17"
+    type: article
+    siteUrl: https://cmds.chambres-agriculture.fr/
+    listUrl: https://cmds.chambres-agriculture.fr/actualites-1
+    frequency: Mensuelle
+    priority: B
+    method: Extraction de la rubrique Actualités + détection de nouvelles URL
+    active: true
+    lastCheck:
+      http: 200
+      at: 2026-09-04
+    zone: {}

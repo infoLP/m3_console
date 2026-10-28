@@ -1,0 +1,99 @@
+/* Tailwind 4, dans la configuration de M2_Console (@tailwindcss/turbopack).
+
+   SANS le preflight pendant la migration : il remettrait à zéro boutons, titres
+   et listes que styles/base.css stylise déjà, et la page portée ne ressemblerait
+   plus à l'ancienne — or c'est la comparaison avant/après qui valide un portage.
+   Seuls le thème et les utilitaires sont chargés ; les composants nouveaux
+   peuvent s'en servir, l'existant ne bouge pas. Le preflight viendra écran par
+   écran, pas d'un coup. */
+/* Ordre des couches : déclaré en tête de styles/base.css, chargé en premier. */
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+/* Primitives du socle (src/composants, M3-106) : classes ui-*, jetons seulement. */
+@import "../composants/composants.css";
+
+/* Jetons Tailwind = variables de M3 (styles/base.css, bloc .cr), par RÉFÉRENCE
+   (M3-106). `@theme inline` fait écrire aux utilitaires `var(--brand)` et non
+   une valeur figée : bg-brand, text-status-signale ou rounded-m3 suivent donc le
+   thème sombre ([data-theme="dark"] .cr) sans rien dupliquer ici. Aucune couleur
+   n'est écrite dans ce fichier — base.css reste la seule source des valeurs.
+   Conséquence : ces utilitaires ne valent quelque chose qu'à l'intérieur d'un
+   élément .cr (console, back-office, page de connexion, modales).
+
+   Espacement : pas de mapping. Tailwind 4 calcule p-1, gap-2, m-4… comme des
+   multiples de --spacing (0.25rem = 4 px, la racine restant à 16 px), et notre
+   échelle --space-N vaut N × 4 px : p-2 = 8 px = var(--space-2), p-6 = 24 px =
+   var(--space-6). Les deux échelles coïncident déjà ; redéfinir --spacing-*
+   n'ajouterait qu'un second nom pour la même valeur.
+
+   `reference` : Tailwind n'écrit aucune de ces variables dans :root. Sans lui,
+   il y posait `--text-xs: var(--text-xs)`, une référence circulaire (les noms
+   Tailwind et ceux de base.css coïncident pour le texte, par contrat).
+   `--text-*: initial` retire l'échelle par défaut de Tailwind, et avec elle ses
+   interlignages imposés (text-xs posait line-height 1,33) : un utilitaire de
+   taille ne change que la taille, l'interligne reste celui de .cr. */
+@theme inline reference {
+  --color-brand: var(--brand);
+  --color-brand-tint: var(--brand-tint);
+  --color-brand-ink: var(--brand-ink);
+  --color-on-brand: var(--on-brand);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-go: var(--go);
+  --color-go-tint: var(--go-tint);
+  --color-on-go: var(--on-go);
+  --color-amber: var(--amber);
+  --color-amber-tint: var(--amber-tint);
+  --color-on-amber: var(--on-amber);
+  --color-stop: var(--stop);
+  --color-stop-tint: var(--stop-tint);
+  --color-on-stop: var(--on-stop);
+
+  --color-status-brouillon: var(--status-brouillon);
+  --color-status-a_revoir: var(--status-a_revoir);
+  --color-status-signale: var(--status-signale);
+  --color-status-valide: var(--status-valide);
+  --color-status-publie: var(--status-publie);
+  --color-status-archive: var(--status-archive);
+
+  --color-rub-economie: var(--rub-economie);
+  --color-rub-economie-tint: var(--rub-economie-tint);
+  --color-rub-culture: var(--rub-culture);
+  --color-rub-culture-tint: var(--rub-culture-tint);
+  --color-rub-environnement: var(--rub-environnement);
+  --color-rub-environnement-tint: var(--rub-environnement-tint);
+  --color-rub-societe: var(--rub-societe);
+  --color-rub-societe-tint: var(--rub-societe-tint);
+  --color-rub-sport: var(--rub-sport);
+  --color-rub-sport-tint: var(--rub-sport-tint);
+
+  --font-sans: var(--sans);
+  --font-serif: var(--serif);
+  --font-mono: var(--mono);
+
+  --text-*: initial;
+  --text-2xs: var(--text-2xs);
+  --text-xs: var(--text-xs);
+  --text-sm: var(--text-sm);
+  --text-base: var(--text-base);
+  --text-md: var(--text-md);
+  --text-lg: var(--text-lg);
+  --text-xl: var(--text-xl);
+  --text-2xl: var(--text-2xl);
+
+  --radius-xs: var(--r-xs);
+  --radius-sm: var(--r-sm);
+  --radius-md: var(--r);
+  --radius-lg: var(--r-lg);
+  --radius-pill: var(--r-pill);
+  /* Noms d'origine, conservés. */
+  --radius-m3: var(--r);
+  --radius-m3-sm: var(--r-sm);
+}
