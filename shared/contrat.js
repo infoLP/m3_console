@@ -13,22 +13,40 @@ export const JOB_KINDS = [
   "test_source", "test_wp_target", "test_llm", "fetch_models", "preview_prompt", "resolve_communes",
 ];
 
-/* Deux voies, deux boucles dans le worker. La chaîne porte le long (une
+/* Quatre voies, quatre boucles dans le worker. La chaîne porte le long (une
    génération peut durer 20 min) ; l'interactive porte ce qu'un écran attend
-   (≤ 30-45 s) et n'est jamais bloquée par la chaîne. La voie n'est pas en base :
-   la changer ne demande pas de migration. */
+   (≤ 30-45 s) ; la voie « articles » (R6, T19) porte la publication d'un
+   article (≤ 2 min), qui n'attend ni derrière une génération ni ne retient
+   l'interactive ; la voie « fond » (R9) porte le scan des concurrents, qui peut
+   durer une heure et ne doit retenir ni la récolte ni la génération demandées
+   depuis la console. Aucune n'est bloquée par une autre. La voie n'est pas en base :
+   la changer ne demande pas de migration.
+
+   regenerate reste dans la chaîne : les compteurs LLM et le moteur courant
+   sont globaux au processus, une régénération en parallèle d'une génération
+   fausserait ses comptes (isolation prévue en T32). */
 export const VOIES = {
-  chaine: ["harvest", "generate", "test_models", "rescore", "competitor_scan", "restore_sources", "regenerate", "publish"],
+  chaine: ["harvest", "generate", "test_models", "rescore", "restore_sources", "regenerate"],
+  articles: ["publish"],
+  fond: ["competitor_scan"],
   interactive: ["test_source", "test_wp_target", "test_llm", "fetch_models", "preview_prompt", "resolve_communes"],
 };
 
 export function voieDe(kind) {
-  return VOIES.interactive.includes(kind) ? "interactive" : "chaine";
+  if (VOIES.interactive.includes(kind)) return "interactive";
+  if (VOIES.articles.includes(kind)) return "articles";
+  if (VOIES.fond.includes(kind)) return "fond";
+  return "chaine";
 }
 
 export const INTERVALLE_CHAINE_MS = 5000;
+export const INTERVALLE_ARTICLES_MS = 2000;
+/* Fond : pas de délai maximal, un scan borne lui-même ses appels. */
+export const INTERVALLE_FOND_MS = 10_000;
 export const INTERVALLE_INTERACTIVE_MS = 750;
-/* Au-delà, la voie interactive clôt la demande en échec et passe à la suivante. */
+/* Au-delà, la voie clôt la demande en échec et passe à la suivante (la tâche,
+   elle, n'est pas interrompue : chacune borne ses propres appels). */
+export const DELAI_MAX_ARTICLES_MS = 5 * 60_000;
 export const DELAI_MAX_INTERACTIVE_MS = 60_000;
 /* Ce qu'une route de la console attend une demande interactive avant de rendre la main. */
 export const ATTENTE_INTERACTIVE_MS = 45_000;
@@ -86,7 +104,7 @@ export function ligneDemande(r) {
 }
 
 /* kv `moteur/etat`, écrit par le worker à chaque battement (5 s) :
-   { at, worker, demarre, voies: { chaine|interactive: { occupee, demande } } }.
+   { at, worker, demarre, voies: { chaine|articles|fond|interactive: { occupee, demande } } }.
    Jamais de secret : identifiants de demande, types et horodatages seulement. */
 export const KV_MOTEUR_ETAT = "moteur/etat";
 export const MOTEUR_PERIME_MS = 30_000;
