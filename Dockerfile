@@ -39,6 +39,7 @@ RUN mkdir -p /app/logs && chown node:node /app/logs
 USER node
 EXPOSE 4173
 # /api/health : sans session, touche la base (wget : busybox de node:alpine).
+# 127.0.0.1 et non localhost : Alpine résout localhost en ::1, Next n'écoute qu'en IPv4.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD wget -qO- "http://localhost:${PORT}/api/health" >/dev/null 2>&1 || exit 1
+  CMD wget -qO- "http://127.0.0.1:${PORT}/api/health" >/dev/null 2>&1 || exit 1
 CMD ["node", "server.js"]
