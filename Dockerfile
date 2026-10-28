@@ -34,6 +34,8 @@ COPY --from=build --chown=node:node /app/public ./public
 COPY --chown=node:node config ./config
 COPY --chown=node:node migrations ./migrations
 COPY --chown=node:node src/generate/communes.fr.json ./src/generate/communes.fr.json
+# Journal (src/lib/log.js) : /app appartient à root, logs/ doit être à node.
+RUN mkdir -p /app/logs && chown node:node /app/logs
 USER node
 EXPOSE 4173
 # /api/health : sans session, touche la base (wget : busybox de node:alpine).
