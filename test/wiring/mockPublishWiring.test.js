@@ -86,7 +86,7 @@ if (typeof mock.module !== "function") {
      pour qu'il n'écrase pas une édition faite entre-temps. */
   test("régénération acceptée : demande « regenerate » déposée avec updatedAt", async () => {
     articles.set("rg", { id: "rg", status: "a_revoir", provider: "openrouter", title: "t", chapo: "", body: [], seo: {}, zone: {}, updatedAt: "2026-10-28T10:00:00.000Z" });
-    const r = await call(A.regenerate, { params: ["rg"], body: { altPrompt: "plus court" } });
+    const r = await call(A.regenerate, { params: ["rg"], body: { altPrompt: "plus court", force: true } });   // zone vide : hors couverture, confirmée
     assert.equal(r.status, 202);
     const d = deposes.at(-1);
     assert.equal(d.kind, "regenerate");
